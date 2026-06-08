@@ -1,0 +1,6 @@
+{
+  "name": "Cervecería E-Commerce",
+  "description": "Plataforma de e-commerce y administración para cerveza artesanal, incluyendo catálogo de productos, carrito de compras, simulación de pasarela de pagos, gestión de inventario y reportes de ventas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
