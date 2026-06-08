@@ -33,7 +33,7 @@ interface CheckoutModalProps {
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
-  const { cart, processCheckout, shippingConfig } = useStore();
+  const { cart, processCheckout, shippingConfig, successfulOrderToShow, setSuccessfulOrderToShow } = useStore();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Form states - Step 1: Shipping Details
@@ -41,7 +41,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     fullName: '',
     email: '',
     address: '',
-    commune: 'Valdivia',
+    commune: 'San Fernando',
     phone: '',
     notes: '',
   });
@@ -58,6 +58,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   const [errorMessage, setErrorMessage] = useState('');
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [jsonCopied, setJsonCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (successfulOrderToShow) {
+      setStep(3);
+      setCreatedOrder(successfulOrderToShow);
+    } else {
+      setStep(1);
+      setCreatedOrder(null);
+    }
+  }, [successfulOrderToShow]);
+
+  const handleClose = () => {
+    if (successfulOrderToShow) {
+      setSuccessfulOrderToShow(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment_status');
+      url.searchParams.delete('order_id');
+      window.history.replaceState({}, '', url.toString());
+    }
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -124,44 +145,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   };
 
   // Submit flow
-  const handleProceedToPayment = (e: React.FormEvent) => {
+  const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateShipping()) {
       setErrorMessage('Por favor, completa correctamente todos los campos de despacho.');
       return;
     }
     setErrorMessage('');
-    setStep(2);
+    setPaymentProcessing(true);
+
+    const result = await processCheckout(shippingDetails);
+    
+    if (result.success && result.paymentUrl) {
+      // Redirect page to dynamic sandbox Webpay portal on the server
+      window.location.href = result.paymentUrl;
+    } else {
+      setPaymentProcessing(false);
+      setErrorMessage(result.error || 'Ocurrió un error inicializando el pago. Intenta nuevamente.');
+    }
   };
 
   const handleSimulatePayment = (e: React.FormEvent) => {
+    // Left legacy fallback just in case
     e.preventDefault();
-    if (!validateCard()) {
-      setErrorMessage('Por favor, ingresa los datos de tu tarjeta de crédito válidos.');
-      return;
-    }
-
-    setErrorMessage('');
-    setPaymentProcessing(true);
-
-    // Simulate Webpay request lag
-    setTimeout(() => {
-      // Determine card brand
-      const firstDigit = cardDetails.number.charAt(0);
-      const brand = firstDigit === '4' ? 'Visa' : firstDigit === '5' ? 'Mastercard' : 'Webpay';
-
-      const result = processCheckout(shippingDetails, brand);
-
-      setPaymentProcessing(false);
-      
-      if (result.success && result.order) {
-        setCreatedOrder(result.order);
-        setStep(3);
-      } else {
-        setErrorMessage(result.error || 'Ocurrió un error procesando el pago. Intenta nuevamente.');
-        setStep(1); // Go back to check stock or resolve
-      }
-    }, 2000);
   };
 
   const copyPayload = () => {
@@ -209,16 +215,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   };
 
   const communeOptions = [
-    'Valdivia',
+    'San Fernando',
     'Santiago',
     'Las Condes',
-    'Concepción',
-    'Temuco',
     'Viña del Mar',
-    'Antofagasta',
-    'Puerto Montt',
-    'La Serena',
-    'Rancagua'
+    'Curicó',
+    'Rancagua',
+    'Chimbarongo',
+    'Nancagua',
+    'Santa Cruz',
+    'Placilla'
   ];
 
   return (
@@ -241,7 +247,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
             </div>
             
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-1 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-805 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -347,7 +353,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                   >
                     {communeOptions.map((opt) => (
                       <option key={opt} value={opt}>
-                        {opt} {opt === 'Valdivia' ? '(Envío Local de Selección)' : ''}
+                        {opt} {opt === 'San Fernando' ? '(Envío Local Veloz)' : ''}
                       </option>
                     ))}
                   </select>
@@ -391,11 +397,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
               <div className="pt-4 border-t border-zinc-800 flex justify-end">
                 <button
                   type="submit"
-                  disabled={!validateShipping()}
+                  disabled={!validateShipping() || paymentProcessing}
                   className="px-6 py-3 cursor-pointer rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 disabled:bg-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed font-bold text-sm flex items-center gap-1.5 shadow-lg shadow-gold-500/10 transition"
                 >
-                  Continuar al Pago
-                  <ArrowRight className="w-4 h-4 text-zinc-950" />
+                  {paymentProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                      Iniciando Webpay Plus...
+                    </>
+                  ) : (
+                    <>
+                      Continuar al Pago Seguro
+                      <ArrowRight className="w-4 h-4 text-zinc-950" />
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -412,7 +427,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                   </div>
                   <div>
                     <h4 className="text-sm font-bold font-serif text-zinc-100">Portal de Pago Seguro Transbank</h4>
-                    <p className="text-xs text-zinc-500">Comercio: Cervecería Valdiviana SPA</p>
+                    <p className="text-xs text-zinc-500">Comercio: Cervecería Kolchawwe SPA</p>
                   </div>
                 </div>
                 <div className="font-serif text-gold-400 text-right">
@@ -652,7 +667,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
               {/* Close Button or Back To Shop */}
               <div className="pt-4 border-t border-zinc-800 flex justify-end">
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="px-6 py-2.5 bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 font-bold rounded-xl text-xs transition shadow-lg shadow-gold-500/10 cursor-pointer"
                 >
                   Volver a la Tienda

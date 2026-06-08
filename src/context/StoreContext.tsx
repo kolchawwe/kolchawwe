@@ -5,23 +5,26 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, CartItem, ShippingConfig, ShippingDetails, Order } from '../types';
-import { INITIAL_PRODUCTS } from '../data/products';
 
 interface StoreContextType {
   products: Product[];
   orders: Order[];
   shippingConfig: ShippingConfig;
   cart: CartItem[];
+  successfulOrderToShow: Order | null;
+  setSuccessfulOrderToShow: (order: Order | null) => void;
   addToCart: (product: Product, quantity: number) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
-  addProduct: (product: Omit<Product, 'id'>) => void;
-  updateProduct: (id: string, product: Product) => void;
-  deleteProduct: (id: string) => void;
-  updateShippingConfig: (config: ShippingConfig) => void;
-  processCheckout: (shippingDetails: ShippingDetails, cardBrand: string) => { success: boolean; order?: Order; error?: string };
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>;
+  updateProduct: (id: string, product: Product) => Promise<boolean>;
+  deleteProduct: (id: string) => Promise<boolean>;
+  updateShippingConfig: (config: ShippingConfig) => Promise<boolean>;
+  processCheckout: (shippingDetails: ShippingDetails) => Promise<{ success: boolean; error?: string; paymentUrl?: string }>;
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>;
+  refreshProducts: () => void;
+  refreshOrders: () => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -34,65 +37,86 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     freeShippingThreshold: 25000,
   });
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [successfulOrderToShow, setSuccessfulOrderToShow] = useState<Order | null>(null);
 
-  // Load initial data
+  // Load initial data from Backend server
+  const loadBackendData = async () => {
+    try {
+      const prodRes = await fetch('/api/products');
+      if (prodRes.ok) {
+        const prodData = await prodRes.json();
+        setProducts(prodData);
+      }
+
+      const ordRes = await fetch('/api/orders');
+      if (ordRes.ok) {
+        const ordData = await ordRes.json();
+        setOrders(ordData);
+      }
+
+      const configRes = await fetch('/api/shipping-config');
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        setShippingConfig(configData);
+      }
+    } catch (err) {
+      console.error('Error loading full-stack database from backend:', err);
+    }
+  };
+
   useEffect(() => {
-    const savedProducts = localStorage.getItem('brewery_products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    } else {
-      setProducts(INITIAL_PRODUCTS);
-      localStorage.setItem('brewery_products', JSON.stringify(INITIAL_PRODUCTS));
-    }
+    loadBackendData();
 
-    const savedOrders = localStorage.getItem('brewery_orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
-    } else {
-      setOrders([]);
-    }
-
-    const savedShipping = localStorage.getItem('brewery_shipping_config');
-    if (savedShipping) {
-      setShippingConfig(JSON.parse(savedShipping));
-    }
-
+    // Load cart from client storage
     const savedCart = localStorage.getItem('brewery_cart');
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
+
+    // Capture Webpay payment return status inside the URL query
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+    const orderId = params.get('order_id');
+
+    if (paymentStatus === 'success' && orderId) {
+      // Clear cart globally
+      setCart([]);
+      localStorage.removeItem('brewery_cart');
+
+      // Fetch active orders to locate the matching order and open receipt view
+      fetch('/api/orders')
+        .then((res) => res.json())
+        .then((ordersList: Order[]) => {
+          setOrders(ordersList);
+          const foundOrder = ordersList.find((o) => o.id === orderId);
+          if (foundOrder) {
+            setSuccessfulOrderToShow(foundOrder);
+          }
+        })
+        .catch((err) => console.error('Error fetching order receipt from backend:', err));
+    }
   }, []);
 
-  // Sync to local storage helper
-  const saveProducts = (updated: Product[]) => {
-    setProducts(updated);
-    localStorage.setItem('brewery_products', JSON.stringify(updated));
-  };
-
-  const saveOrders = (updated: Order[]) => {
-    setOrders(updated);
-    localStorage.setItem('brewery_orders', JSON.stringify(updated));
-  };
-
-  const saveCart = (updated: CartItem[]) => {
+  const saveCartLocally = (updated: CartItem[]) => {
     setCart(updated);
     localStorage.setItem('brewery_cart', JSON.stringify(updated));
   };
 
-  // Cart operations
+  // Cart operations (Client-side)
   const addToCart = (product: Product, quantity: number) => {
     const existingIndex = cart.findIndex((item) => item.product.id === product.id);
     let updatedCart = [...cart];
 
+    const currentDBProduct = products.find((p) => p.id === product.id) || product;
+
     if (existingIndex > -1) {
       const newQty = updatedCart[existingIndex].quantity + quantity;
-      // Cap at product stock
-      updatedCart[existingIndex].quantity = Math.min(newQty, product.stock);
+      updatedCart[existingIndex].quantity = Math.min(newQty, currentDBProduct.stock);
     } else {
-      updatedCart.push({ product, quantity: Math.min(quantity, product.stock) });
+      updatedCart.push({ product: currentDBProduct, quantity: Math.min(quantity, currentDBProduct.stock) });
     }
 
-    saveCart(updatedCart);
+    saveCartLocally(updatedCart);
   };
 
   const updateCartQuantity = (productId: string, quantity: number) => {
@@ -106,127 +130,146 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return item;
     });
 
-    saveCart(updatedCart);
+    saveCartLocally(updatedCart);
   };
 
   const removeFromCart = (productId: string) => {
     const updatedCart = cart.filter((item) => item.product.id !== productId);
-    saveCart(updatedCart);
+    saveCartLocally(updatedCart);
   };
 
   const clearCart = () => {
-    saveCart([]);
+    saveCartLocally([]);
   };
 
-  // Admin Product operations
-  const addProduct = (newProd: Omit<Product, 'id'>) => {
+  // Synchronizers with Backend
+  const syncProductsToBackend = async (updatedList: Product[]): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedList),
+      });
+      if (res.ok) {
+        setProducts(updatedList);
+        return true;
+      }
+    } catch (err) {
+      console.error('Error writing product to server database:', err);
+    }
+    return false;
+  };
+
+  // Product Admin operations
+  const addProduct = async (newProd: Omit<Product, 'id'>): Promise<boolean> => {
     const id = `beer-${Date.now()}`;
     const productWithId: Product = { ...newProd, id };
-    const updatedPrs = [...products, productWithId];
-    saveProducts(updatedPrs);
+    const updated = [...products, productWithId];
+    return await syncProductsToBackend(updated);
   };
 
-  const updateProduct = (id: string, updatedP: Product) => {
-    const updatedPrs = products.map((p) => (p.id === id ? updatedP : p));
-    saveProducts(updatedPrs);
+  const updateProduct = async (id: string, updatedP: Product): Promise<boolean> => {
+    const updatedList = products.map((p) => (p.id === id ? updatedP : p));
+    const success = await syncProductsToBackend(updatedList);
+    if (success) {
+      // Sync in-cart metadata
+      const updatedCart = cart.map((item) => {
+        if (item.product.id === id) {
+          return { ...item, product: updatedP };
+        }
+        return item;
+      });
+      saveCartLocally(updatedCart);
+    }
+    return success;
+  };
 
-    // Sync product in active cart search as well
-    const updatedCart = cart.map((item) => {
-      if (item.product.id === id) {
-        return { ...item, product: updatedP };
+  const deleteProduct = async (id: string): Promise<boolean> => {
+    const updatedList = products.filter((p) => p.id !== id);
+    const success = await syncProductsToBackend(updatedList);
+    if (success) {
+      const updatedCart = cart.filter((item) => item.product.id !== id);
+      saveCartLocally(updatedCart);
+    }
+    return success;
+  };
+
+  const updateShippingConfig = async (config: ShippingConfig): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/shipping-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+      if (res.ok) {
+        setShippingConfig(config);
+        return true;
       }
-      return item;
-    });
-    saveCart(updatedCart);
+    } catch (err) {
+      console.error('Error writing config to server:', err);
+    }
+    return false;
   };
 
-  const deleteProduct = (id: string) => {
-    const updatedPrs = products.filter((p) => p.id !== id);
-    saveProducts(updatedPrs);
-
-    // Also remove from cart if present
-    const updatedCart = cart.filter((item) => item.product.id !== id);
-    saveCart(updatedCart);
-  };
-
-  const updateShippingConfig = (config: ShippingConfig) => {
-    setShippingConfig(config);
-    localStorage.setItem('brewery_shipping_config', JSON.stringify(config));
-  };
-
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    const updatedOrders = orders.map((o) => (o.id === orderId ? { ...o, status } : o));
-    saveOrders(updatedOrders);
-  };
-
-  // Checkout transaction
-  const processCheckout = (shippingDetails: ShippingDetails, cardBrand: string) => {
-    // 1. Perform stock validation check
-    const outOfStockItems: string[] = [];
-    cart.forEach((item) => {
-      const dbProduct = products.find((p) => p.id === item.product.id);
-      if (!dbProduct || dbProduct.stock < item.quantity) {
-        outOfStockItems.push(item.product.name);
+  const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/orders/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId, status }),
+      });
+      if (res.ok) {
+        const bodyObj = await res.json();
+        if (bodyObj.success) {
+          setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+          return true;
+        }
       }
-    });
+    } catch (err) {
+      console.error('Error updating order status near backend:', err);
+    }
+    return false;
+  };
 
-    if (outOfStockItems.length > 0) {
+  // Checkout Session Generation
+  const processCheckout = async (shippingDetails: ShippingDetails): Promise<{ success: boolean; error?: string; paymentUrl?: string }> => {
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          shippingDetails,
+          items: cart,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        return {
+          success: true,
+          paymentUrl: data.paymentUrl,
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error || 'Ocurrió un error inesperado al procesar el pago.',
+        };
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
       return {
         success: false,
-        error: `Lo sentimos, los siguientes productos no tienen suficiente stock: ${outOfStockItems.join(', ')}.`,
+        error: 'Error de red al intentar conectar con el servidor comercial.',
       };
     }
-
-    // 2. Calculate subtotals and discounts
-    const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const shippingCost = subtotal >= shippingConfig.freeShippingThreshold ? 0 : shippingConfig.basePrice;
-    const total = subtotal + shippingCost;
-
-    // 3. Deduct stock from the db products list
-    const updatedProducts = products.map((p) => {
-      const cartItem = cart.find((item) => item.product.id === p.id);
-      if (cartItem) {
-        return { ...p, stock: p.stock - cartItem.quantity };
-      }
-      return p;
-    });
-
-    // Save updated products to DB
-    saveProducts(updatedProducts);
-
-    // 4. Create Order
-    const newOrder: Order = {
-      id: `CL-ORD-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
-      date: new Date().toISOString(),
-      items: [...cart],
-      shippingDetails,
-      subtotal,
-      shippingCost,
-      total,
-      status: 'Pendiente',
-      paymentId: `WP-${Math.floor(10000000 + Math.random() * 90000000)}`,
-    };
-
-    const updatedOrders = [newOrder, ...orders];
-    saveOrders(updatedOrders);
-
-    // 5. Trigger dispatch mock data notification payload
-    console.log('[E-Commerce Dispatch Notification Service]: Order created', {
-      orderId: newOrder.id,
-      dispatchAddress: `${shippingDetails.address}, ${shippingDetails.commune}`,
-      items: newOrder.items.map(item => `${item.product.name} x${item.quantity}`),
-      subtotal: newOrder.subtotal,
-      shippingCost: newOrder.shippingCost,
-      total: newOrder.total
-    });
-
-    // Clear active cart
-    saveCart([]);
-
-    return {
-      success: true,
-      order: newOrder,
-    };
   };
 
   return (
@@ -236,6 +279,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orders,
         shippingConfig,
         cart,
+        successfulOrderToShow,
+        setSuccessfulOrderToShow,
         addToCart,
         updateCartQuantity,
         removeFromCart,
@@ -246,6 +291,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateShippingConfig,
         processCheckout,
         updateOrderStatus,
+        refreshProducts: loadBackendData,
+        refreshOrders: loadBackendData,
       }}
     >
       {children}

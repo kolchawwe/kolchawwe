@@ -29,11 +29,11 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setView, toggleCart
             <Beer className="w-5.5 h-5.5" />
           </div>
           <div>
-            <span className="text-xl font-bold tracking-tight font-serif bg-gradient-to-r from-gold-400 via-yellow-200 to-gold-600 bg-clip-text text-transparent">
-              Cervecería Valdiviana
+            <span className="text-xl font-bold tracking-tight font-serif bg-gradient-to-r from-gold-400 via-yellow-200 to-gold-600 bg-clip-text text-transparent uppercase">
+              Cervecería Kolchawwe
             </span>
             <span className="block text-[9px] uppercase tracking-[0.25em] text-gold-400/80 font-bold font-sans">
-              Colección Suprema
+              San Fernando · Chile
             </span>
           </div>
         </div>

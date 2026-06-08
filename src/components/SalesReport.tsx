@@ -85,7 +85,7 @@ export const SalesReport: React.FC = () => {
     
     const mockAddresses = [
       'Av. Libertad 1240, Concepción',
-      'Calle Phillipi 450, Valdivia',
+      'Avenida Bernardo O\'Higgins 450, San Fernando',
       'El Inca 5120, Las Condes, Santiago',
       'San Martín 87, Viña del Mar',
       'Aníbal Pinto 44, Temuco'
@@ -99,7 +99,7 @@ export const SalesReport: React.FC = () => {
       'Carlos Schuler'
     ];
 
-    const mockCommunes = ['Concepción', 'Valdivia', 'Las Condes', 'Viña del Mar', 'Temuco'];
+    const mockCommunes = ['Concepción', 'San Fernando', 'Las Condes', 'Viña del Mar', 'Temuco'];
 
     const mockOrdersSeed: Order[] = Array.from({ length: 4 }).map((_, i) => {
       // Pick random beer
@@ -139,19 +139,25 @@ export const SalesReport: React.FC = () => {
       };
     });
 
-    const currentOrders = JSON.parse(localStorage.getItem('brewery_orders') || '[]');
-    const blended = [...currentOrders, ...mockOrdersSeed];
-    localStorage.setItem('brewery_orders', JSON.stringify(blended));
-    
-    // Quick reload window to parse localstorage changes securely
-    window.location.reload();
+    const blended = [...orders, ...mockOrdersSeed];
+    fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(blended)
+    })
+    .then(res => {
+      if (res.ok) {
+        window.location.reload();
+      }
+    })
+    .catch(err => console.error("Error seeding backend orders:", err));
   };
 
   const copyDispatchLogistics = (order: Order) => {
     const payload = JSON.stringify({
       orderId: order.id,
       meta: {
-        vendor: "Cervecería Valdivia",
+        vendor: "Cervecería Kolchawwe SPA",
         date_issued: order.date,
         sync_code: order.paymentId
       },

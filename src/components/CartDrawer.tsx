@@ -106,7 +106,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheck
                 <div>
                   <h3 className="text-lg font-bold text-zinc-300 font-serif">Tu carrito está vacío</h3>
                   <p className="text-sm text-zinc-500 mt-1 max-w-xs mx-auto">
-                    ¿Qué tal una refrescante Valdivian Fog IPA o una cremosa Stout Oats? Explora nuestro catálogo.
+                    ¿Qué tal una refrescante Kolchawwe Golden Ale o una cremosa Oatmeal Stout? Explora nuestro catálogo.
                   </p>
                 </div>
                 <button
