@@ -5,7 +5,7 @@
 
 import pg from "pg";
 const { Pool } = pg;
-import { Product, Order, ShippingConfig } from "./src/types.ts";
+import { Product, Order, ShippingConfig, Client } from "./src/types.ts";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -81,7 +81,57 @@ export async function initializePostgres(seedProducts: any[]) {
       );
     `);
 
+    // 4. Create Clients Table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        email VARCHAR(255) PRIMARY KEY,
+        full_name VARCHAR(255) NOT NULL,
+        phone VARCHAR(100),
+        address TEXT,
+        commune VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // --- SEED TABLES IF EMPTY ---
+    
+    // Seed clients from existing orders if clients table is empty
+    const { rows: clientCountRows } = await client.query("SELECT COUNT(*) FROM clients");
+    if (parseInt(clientCountRows[0].count, 10) === 0) {
+      console.log("🌱 [Database] Populating clients from historical orders database...");
+      const { rows: orderRows } = await client.query("SELECT shipping_details FROM orders");
+      const clientMap = new Map<string, any>();
+      for (const row of orderRows) {
+        try {
+          const sDetails = typeof row.shipping_details === "string" 
+            ? JSON.parse(row.shipping_details) 
+            : row.shipping_details;
+          if (sDetails && sDetails.email) {
+            const emailKey = sDetails.email.toLowerCase().trim();
+            if (!clientMap.has(emailKey)) {
+              clientMap.set(emailKey, {
+                email: emailKey,
+                fullName: sDetails.fullName || "",
+                phone: sDetails.phone || "",
+                address: sDetails.address || "",
+                commune: sDetails.commune || ""
+              });
+            }
+          }
+        } catch (parseErr) {
+          // ignore
+        }
+      }
+      for (const c of clientMap.values()) {
+        await client.query(
+          `INSERT INTO clients (email, full_name, phone, address, commune)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (email) DO NOTHING`,
+          [c.email, c.fullName, c.phone, c.address, c.commune]
+        );
+      }
+      console.log(`🌱 [Database] Populated ${clientMap.size} clients successfully.`);
+    }
     
     // Seed products
     const { rows: prodCountRows } = await client.query("SELECT COUNT(*) FROM products");
@@ -325,3 +375,72 @@ export async function saveShippingConfigDb(config: ShippingConfig, saveShippingC
     return false;
   }
 }
+
+/**
+ * Retrieve list of clients
+ */
+export async function getClientsDb(getClientsFileFallback: () => Client[]): Promise<Client[]> {
+  if (!pool) return getClientsFileFallback();
+  try {
+    const { rows } = await pool.query(
+      "SELECT email, full_name as \"fullName\", phone, address, commune FROM clients ORDER BY created_at DESC"
+    );
+    return rows as Client[];
+  } catch (err) {
+    console.error("⚠️ [Database] error executing 'getClientsDb', using file storage fallback:", err);
+    return getClientsFileFallback();
+  }
+}
+
+/**
+ * Replace / Bulk update clients securely
+ */
+export async function saveClientsDb(clientsList: Client[], saveClientsFileFallback: (c: Client[]) => void): Promise<boolean> {
+  if (!pool) {
+    saveClientsFileFallback(clientsList);
+    return true;
+  }
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Delete clients not included in the updated list
+      const emailsToKeep = clientsList.map((c) => c.email.toLowerCase().trim());
+      if (emailsToKeep.length > 0) {
+        await client.query(
+          "DELETE FROM clients WHERE LOWER(TRIM(email)) NOT IN (" + emailsToKeep.map((_, i) => `$${i + 1}`).join(",") + ")",
+          emailsToKeep
+        );
+      } else {
+        await client.query("DELETE FROM clients");
+      }
+
+      // Upsert current list
+      for (const c of clientsList) {
+        await client.query(
+          `INSERT INTO clients (email, full_name, phone, address, commune)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (email) DO UPDATE SET
+             full_name = EXCLUDED.full_name,
+             phone = EXCLUDED.phone,
+             address = EXCLUDED.address,
+             commune = EXCLUDED.commune`,
+          [c.email.toLowerCase().trim(), c.fullName, c.phone, c.address, c.commune]
+        );
+      }
+
+      await client.query("COMMIT");
+      return true;
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("⚠️ [Database] error executing 'saveClientsDb':", err);
+    return false;
+  }
+}
+

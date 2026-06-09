@@ -11,6 +11,8 @@ import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { ProductAdmin } from './components/ProductAdmin';
 import { SalesReport } from './components/SalesReport';
+import { ClientsAdmin } from './components/ClientsAdmin';
+import { AdminGate } from './components/AdminGate';
 import {
   Search,
   Sliders,
@@ -24,7 +26,9 @@ import {
   ChevronRight,
   Mail,
   MapPin,
-  Compass
+  Compass,
+  Users,
+  LogOut
 } from 'lucide-react';
 
 function Storefront() {
@@ -221,10 +225,23 @@ function Storefront() {
 
 function MainLayout() {
   const [view, setView] = useState<'shop' | 'admin'>('shop');
-  const [adminTab, setAdminTab] = useState<'inventory' | 'sales'>('inventory');
+  const [adminTab, setAdminTab] = useState<'inventory' | 'sales' | 'clients'>('inventory');
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { successfulOrderToShow } = useStore();
+  const [adminAuthorized, setAdminAuthorized] = useState<boolean>(() => {
+    return sessionStorage.getItem('kolchawwe_admin_auth') === 'true';
+  });
+
+  const handleAuthorize = () => {
+    setAdminAuthorized(true);
+    sessionStorage.setItem('kolchawwe_admin_auth', 'true');
+  };
+
+  const handleLogout = () => {
+    setAdminAuthorized(false);
+    sessionStorage.removeItem('kolchawwe_admin_auth');
+  };
 
   React.useEffect(() => {
     if (successfulOrderToShow) {
@@ -246,10 +263,12 @@ function MainLayout() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
         {view === 'shop' ? (
           <Storefront />
+        ) : !adminAuthorized ? (
+          <AdminGate onSuccess={handleAuthorize} />
         ) : (
           <div className="space-y-6" id="admin-view-root">
             {/* Admin visual dashboard heading */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-850 pb-5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-850 pb-5">
               <div>
                 <h2 className="text-2xl font-bold font-serif text-zinc-100 flex items-center gap-2">
                   <Sliders className="w-6 h-6 text-gold-500" />
@@ -260,36 +279,64 @@ function MainLayout() {
                 </p>
               </div>
 
-              {/* Navigation inside administration */}
-              <div className="flex bg-zinc-900 border border-zinc-800 p-1 rounded-xl text-xs font-semibold sm:w-auto self-start">
+              {/* Navigation inside administration and logout flag */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex bg-zinc-900 border border-zinc-800 p-1 rounded-xl text-xs font-semibold sm:w-auto self-start">
+                  <button
+                    onClick={() => setAdminTab('inventory')}
+                    className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                      adminTab === 'inventory' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-4 h-4" />
+                      Inventario & Precios
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('sales')}
+                    className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                      adminTab === 'sales' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4" />
+                      Informe de Ventas
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setAdminTab('clients')}
+                    className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                      adminTab === 'clients' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      Clientes Compradores
+                    </span>
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => setAdminTab('inventory')}
-                  className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
-                    adminTab === 'inventory' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
-                  }`}
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-rose-955/20 hover:bg-rose-900/30 text-rose-400 hover:text-rose-300 border border-rose-900/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  title="Cerrar sesión de administración"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Layers className="w-4 h-4" />
-                    Inventario & Precios
-                  </span>
-                </button>
-                <button
-                  onClick={() => setAdminTab('sales')}
-                  className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
-                    adminTab === 'sales' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4" />
-                    Informe de Ventas
-                  </span>
+                  <LogOut className="w-3.5 h-3.5" />
+                  Cerrar Sesión
                 </button>
               </div>
             </div>
 
             {/* Inner router tabs */}
             <div className="pt-2 animate-fade-in" id="admin-nested-tab-content">
-              {adminTab === 'inventory' ? <ProductAdmin /> : <SalesReport />}
+              {adminTab === 'inventory' ? (
+                <ProductAdmin />
+              ) : adminTab === 'sales' ? (
+                <SalesReport />
+              ) : (
+                <ClientsAdmin />
+              )}
             </div>
           </div>
         )}

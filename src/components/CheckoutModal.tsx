@@ -24,7 +24,9 @@ import {
   Bell,
   HardDriveUpload,
   Copy,
-  Check
+  Check,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 
 interface CheckoutModalProps {
@@ -55,9 +57,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   });
 
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [useSandbox, setUseSandbox] = useState(true);
+  const [mpConfig, setMpConfig] = useState<{ hasMp: boolean; isSandbox: boolean; tokenType: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [jsonCopied, setJsonCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetch('/api/checkout-config')
+        .then(res => res.json())
+        .then((data: { hasMp: boolean; isSandbox: boolean; tokenType: string }) => {
+          setMpConfig(data);
+          setUseSandbox(data.isSandbox);
+        })
+        .catch(err => {
+          console.error("Error al cargar la configuración de Mercado Pago:", err);
+        });
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (successfulOrderToShow) {
@@ -154,7 +172,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     setErrorMessage('');
     setPaymentProcessing(true);
 
-    const result = await processCheckout(shippingDetails);
+    const result = await processCheckout(shippingDetails, useSandbox);
     
     if (result.success && result.paymentUrl) {
       // Redirect page to dynamic sandbox Webpay portal on the server
@@ -394,16 +412,73 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                 />
               </div>
 
-              <div className="pt-4 border-t border-zinc-800 flex justify-end">
+              {/* Banner de Ayuda para Mercado Pago en Producción */}
+              {mpConfig?.hasMp && !useSandbox && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-zinc-300 space-y-2.5">
+                  <div className="flex items-start gap-2.5 text-amber-450">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span className="text-xs font-bold font-sans">
+                      Instrucciones de Mercado Pago (Modo Real)
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-zinc-400">
+                    Estás utilizando tus credenciales reales de producción. Para evitar el error de Mercado Pago <strong className="text-zinc-300">"Una de las partes... es de prueba"</strong>:
+                  </p>
+                  <ul className="list-disc pl-4 text-[10px] space-y-1 text-zinc-400 leading-normal">
+                    <li>
+                      <strong className="text-zinc-300">Cierra tu cuenta corporate:</strong> No intentes realizar el pago si tienes iniciada tu sesión de Mercado Pago vendedora en este navegador. Utiliza una ventana de <strong className="text-amber-400 font-medium">Incógnito</strong> o un dispositivo diferente.
+                    </li>
+                    <li>
+                      <strong className="text-zinc-300">No uses tarjetas de prueba:</strong> En modo real no puedes usar tarjetas de simulación (e.g. que inicien con 4012). Debes pagar con una <strong className="text-zinc-300">tarjeta real diferente</strong> a la del vendedor (puedes transferir o pagar 1 CLP para ensayar).
+                    </li>
+                    <li>
+                      <strong className="text-zinc-300">Para hacer simulaciones ficticias:</strong> Si prefieres probar con tarjetas de simulación, cambia la clave del token a un token de pruebas (empieza con <code className="bg-zinc-900 border border-zinc-800 px-1 py-0.5 rounded text-zinc-350">TEST-</code>) en tus Variables de Entorno.
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Información sobre la Pasarela de Pago */}
+              <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  {mpConfig?.hasMp ? (
+                    <>
+                      <div className={`w-2 h-2 rounded-full ${useSandbox ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`} />
+                      <div>
+                        <span className="text-xs font-bold text-zinc-200 block">
+                          Mercado Pago ({useSandbox ? 'Modo Prueba' : 'Modo Real'})
+                        </span>
+                        <span className="text-[10px] text-zinc-400 block leading-tight">
+                          {useSandbox 
+                            ? 'Simulación segura. No genera cobros reales.' 
+                            : 'Conexión exitosa. Transacción real de producción.'}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
+                      <div>
+                        <span className="text-xs font-bold text-zinc-200 block">
+                          Simulador Webpay Plus
+                        </span>
+                        <span className="text-[10px] text-zinc-400 block leading-tight">
+                          Pruebas locales del flujo de compra y pedidos.
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   type="submit"
                   disabled={!validateShipping() || paymentProcessing}
-                  className="px-6 py-3 cursor-pointer rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 disabled:bg-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed font-bold text-sm flex items-center gap-1.5 shadow-lg shadow-gold-500/10 transition"
+                  className="w-full sm:w-auto px-6 py-3 cursor-pointer rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 disabled:bg-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed font-bold text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-gold-500/10 transition"
                 >
                   {paymentProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
-                      Iniciando Webpay Plus...
+                      Iniciando Pago Seguro...
                     </>
                   ) : (
                     <>

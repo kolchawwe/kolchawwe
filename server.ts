@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { Product, CartItem, ShippingConfig, ShippingDetails, Order } from "./src/types";
+import { Product, CartItem, ShippingConfig, ShippingDetails, Order, Client } from "./src/types";
 import {
   initializePostgres,
   getProductsDb,
@@ -10,7 +10,9 @@ import {
   getOrdersDb,
   saveOrdersDb,
   getShippingConfigDb,
-  saveShippingConfigDb
+  saveShippingConfigDb,
+  getClientsDb,
+  saveClientsDb
 } from "./server-db.ts";
 
 // Keep INITIAL_PRODUCTS here to avoid importing TS files directly to compiled CJS without bundler issues
@@ -87,6 +89,7 @@ const DB_DIR = path.join(process.cwd(), "data-db");
 const PRODUCTS_FILE = path.join(DB_DIR, "products.json");
 const ORDERS_FILE = path.join(DB_DIR, "orders.json");
 const CONFIG_FILE = path.join(DB_DIR, "config.json");
+const CLIENTS_FILE = path.join(DB_DIR, "clients.json");
 
 // Ensure DB folder exists
 if (!fs.existsSync(DB_DIR)) {
@@ -145,6 +148,46 @@ function getShippingConfig(): ShippingConfig {
 
 function saveShippingConfig(config: ShippingConfig) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+
+function getClients(): Client[] {
+  try {
+    if (fs.existsSync(CLIENTS_FILE)) {
+      const content = fs.readFileSync(CLIENTS_FILE, "utf-8");
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("Error reading clients database", err);
+  }
+  return [];
+}
+
+function saveClients(clientsList: Client[]) {
+  fs.writeFileSync(CLIENTS_FILE, JSON.stringify(clientsList, null, 2));
+}
+
+async function registerClientOnOrder(shippingDetails: ShippingDetails) {
+  try {
+    const clients = await getClientsDb(getClients);
+    const emailKey = shippingDetails.email.toLowerCase().trim();
+    const existingIndex = clients.findIndex((c) => c.email.toLowerCase().trim() === emailKey);
+    const newClient: Client = {
+      email: shippingDetails.email,
+      fullName: shippingDetails.fullName,
+      phone: shippingDetails.phone,
+      address: shippingDetails.address,
+      commune: shippingDetails.commune
+    };
+    if (existingIndex > -1) {
+      clients[existingIndex] = newClient;
+    } else {
+      clients.push(newClient);
+    }
+    await saveClientsDb(clients, saveClients);
+    console.log(`👤 [Customer Sync] Registered / updated customer: ${newClient.email}`);
+  } catch (err) {
+    console.error("Error securing/upserting client on callback:", err);
+  }
 }
 
 // Temporary in-memory holding for active secure checkout sessions
@@ -261,37 +304,92 @@ app.post("/api/shipping-config", async (req, res) => {
   }
 });
 
-// 4. Clientes (Extraído de los pedidos completados, agrupado para administración)
+// 4. Clientes (Guardado persistente, edidión, borrado, búsqueda y métricas agregadas)
 app.get("/api/clients", async (req, res) => {
   try {
+    let clients = await getClientsDb(getClients);
     const orders = await getOrdersDb(getOrders);
-    const clientsMap: Record<string, { fullName: string; email: string; phone: string; address: string; totalOrdersCount: number; spentAmount: number }> = {};
-    
-    orders.forEach((o) => {
-      const email = o.shippingDetails.email.toLowerCase().trim();
-      if (!clientsMap[email]) {
-        clientsMap[email] = {
-          fullName: o.shippingDetails.fullName,
-          email: o.shippingDetails.email,
-          phone: o.shippingDetails.phone,
-          address: `${o.shippingDetails.address}, ${o.shippingDetails.commune}`,
-          totalOrdersCount: 0,
-          spentAmount: 0
-        };
-      }
-      clientsMap[email].totalOrdersCount += 1;
-      clientsMap[email].spentAmount += o.total;
+
+    // Si la lista de clientes está vacía pero hay pedidos, realizamos un backfill automático
+    if (clients.length === 0 && orders.length > 0) {
+      console.log("🔄 [Sync] Sincronizando tabla de clientes vacía con los datos de envíos históricos...");
+      const initialClientsMap = new Map<string, Client>();
+      orders.forEach((o) => {
+        const email = o.shippingDetails.email.toLowerCase().trim();
+        if (!initialClientsMap.has(email)) {
+          initialClientsMap.set(email, {
+            email: o.shippingDetails.email,
+            fullName: o.shippingDetails.fullName,
+            phone: o.shippingDetails.phone,
+            address: o.shippingDetails.address,
+            commune: o.shippingDetails.commune
+          });
+        }
+      });
+      clients = Array.from(initialClientsMap.values());
+      await saveClientsDb(clients, saveClients);
+    }
+
+    // Calcular en tiempo real el comportamiento financiero e histórica de compras por cliente
+    const responseClients = clients.map((c) => {
+      const emailKey = c.email.toLowerCase().trim();
+      const clientOrders = orders.filter((o) => o.shippingDetails.email.toLowerCase().trim() === emailKey);
+      const totalOrdersCount = clientOrders.length;
+      const spentAmount = clientOrders.reduce((sum, o) => sum + o.total, 0);
+      return {
+        email: c.email,
+        fullName: c.fullName,
+        phone: c.phone,
+        address: `${c.address}, ${c.commune}`,
+        rawAddress: c.address,         // preserve raw components for editing
+        rawCommune: c.commune,         // preserve raw components for editing
+        totalOrdersCount,
+        spentAmount
+      };
     });
 
-    res.json(Object.values(clientsMap));
+    res.json(responseClients);
   } catch (err) {
     res.status(500).json({ success: false, error: "Error al recuperar reporte de clientes de base de datos." });
   }
 });
 
+app.post("/api/clients", async (req, res) => {
+  const clientsList = req.body;
+  if (Array.isArray(clientsList)) {
+    try {
+      const success = await saveClientsDb(clientsList, saveClients);
+      if (success) {
+        res.json({ success: true, message: "Clientes actualizados correctamente." });
+      } else {
+        res.status(500).json({ success: false, error: "Error al registrar cambios en base de datos." });
+      }
+    } catch (e) {
+      res.status(500).json({ success: false, error: "Ocurrió un error al guardar los clientes." });
+    }
+  } else {
+    res.status(400).json({ success: false, error: "Formato de cuerpo inválido. Debe ser un arreglo." });
+  }
+});
+
 // 5. Checkout y Simulación Segura de Pasarela de Pago Transbank Webpay
+app.get("/api/checkout-config", (req, res) => {
+  let mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!mpAccessToken || mpAccessToken.trim() === "") {
+    mpAccessToken = "APP_USR-6243179757932439-051819-fbc10886bcfae80699d1d0862fe16b3c-3409594471";
+  }
+  mpAccessToken = mpAccessToken.trim();
+  const isSandbox = mpAccessToken.startsWith("TEST-");
+  const tokenType = isSandbox ? "TEST" : mpAccessToken.startsWith("APP_USR-") ? "APP_USR" : "CUSTOM";
+  res.json({
+    hasMp: mpAccessToken.length > 0,
+    isSandbox,
+    tokenType
+  });
+});
+
 app.post("/api/checkout", async (req, res) => {
-  const { shippingDetails, items } = req.body as { shippingDetails: ShippingDetails; items: CartItem[] };
+  const { shippingDetails, items, useSandbox } = req.body as { shippingDetails: ShippingDetails; items: CartItem[]; useSandbox?: boolean };
 
   if (!shippingDetails || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, error: "Faltan los detalles de envío o los productos." });
@@ -322,7 +420,7 @@ app.post("/api/checkout", async (req, res) => {
     const shippingCost = subtotal >= shoppingConfig.freeShippingThreshold ? 0 : shoppingConfig.basePrice;
     const total = subtotal + shippingCost;
 
-    // Generar token único de Webpay
+    // Generar token único de Webpay / Mercado Pago
     const token = `tbk-token-${Math.floor(10000000 + Math.random() * 90000000)}`;
 
     // Guardar sesión de pago temporal por 15 minutos en memoria del servidor
@@ -336,10 +434,119 @@ app.post("/api/checkout", async (req, res) => {
       expiresAt: Date.now() + 15 * 60 * 1000
     };
 
+    // Determinar el host dinámico de retorno para las URLs de callback
+    let hostUrl = process.env.APP_URL;
+    if (!hostUrl && req.headers.referer) {
+      try {
+        hostUrl = new URL(req.headers.referer).origin;
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (!hostUrl) {
+      hostUrl = "https://ais-dev-wtuperk7t4h52vbm25uinc-756231719187.us-east1.run.app";
+    }
+
+    // Si contamos con Token de Mercado Pago, procedemos a crear una Preference de Checkout Pro real
+    let mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    if (!mpAccessToken || mpAccessToken.trim() === "") {
+      mpAccessToken = "APP_USR-6243179757932439-051819-fbc10886bcfae80699d1d0862fe16b3c-3409594471";
+    }
+    mpAccessToken = mpAccessToken.trim();
+
+    if (mpAccessToken) {
+      console.log(`💳 [Checkout] Mercado Pago token detected (${mpAccessToken.substring(0, 10)}...). Utilizing Checkout Pro API...`);
+      const mpItems = items.map((item) => ({
+        id: item.product.id,
+        title: item.product.name,
+        description: item.product.tagline || item.product.name,
+        quantity: item.quantity,
+        unit_price: item.product.price,
+        currency_id: "CLP"
+      }));
+
+      if (shippingCost > 0) {
+        mpItems.push({
+          id: "shipping-cost",
+          title: "Costo de Despacho",
+          description: "Despacho a domicilio",
+          quantity: 1,
+          unit_price: shippingCost,
+          currency_id: "CLP"
+        });
+      }
+
+      // Sanitize phone number format for raw Mercado Pago payload (must be only digits, max 9 for mobile)
+      const digitsOnly = shippingDetails.phone.replace(/\D/g, "");
+      const payerPhone = digitsOnly.startsWith("56") ? digitsOnly.slice(2) : digitsOnly;
+      const finalPhone = payerPhone.length > 0 ? payerPhone.slice(-9) : "999999999";
+
+      // Split full name into first name and last name for Mercado Pago compliance
+      const nameParts = shippingDetails.fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || "Cliente";
+      const lastName = nameParts.slice(1).join(" ") || "General";
+
+      console.log(`💳 [Checkout] Preparing payment details, sanitized phone: +56 ${finalPhone}`);
+
+      const mpResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${mpAccessToken}`
+        },
+        body: JSON.stringify({
+          items: mpItems,
+          payer: {
+            name: firstName,
+            surname: lastName,
+            email: shippingDetails.email,
+            phone: {
+              area_code: "56",
+              number: finalPhone
+            }
+          },
+          back_urls: {
+            success: `${hostUrl}/api/mercadopago-callback?token=${token}&status=success`,
+            failure: `${hostUrl}/api/mercadopago-callback?token=${token}&status=failure`,
+            pending: `${hostUrl}/api/mercadopago-callback?token=${token}&status=pending`
+          },
+          auto_return: "approved",
+          external_reference: token
+        })
+      });
+
+      if (!mpResponse.ok) {
+        const errText = await mpResponse.text();
+        console.error("❌ [Checkout] Mercado Pago API failed:", errText);
+        throw new Error(`Failed to create Mercado Pago preference: ${errText}`);
+      }
+
+      const responseJson = (await mpResponse.json()) as { init_point?: string; sandbox_init_point?: string };
+      
+      // La regla de oro en Mercado Pago es que el tipo de token determina de forma exclusiva la URL de redirección:
+      // - Un token 'TEST-' requiere estrictamente usar 'sandbox_init_point' para pruebas.
+      // - Un token de producción real 'APP_USR-' requiere usar 'init_point' para transacciones activas.
+      // Mezclar un token 'APP_USR-' con 'sandbox_init_point' produce el error API "error de mismatch de partes".
+      const isTokenSandbox = mpAccessToken.startsWith("TEST-");
+      const paymentUrl = isTokenSandbox
+        ? (responseJson.sandbox_init_point || responseJson.init_point)
+        : (responseJson.init_point || responseJson.sandbox_init_point);
+      
+      console.log(`💳 [Checkout] Created preference successfully. isSandboxToken?: ${isTokenSandbox}, selected url: ${paymentUrl}`);
+      
+      if (!paymentUrl) {
+        throw new Error("Mercado Pago API response missing init_point URLs.");
+      }
+
+      res.json({ success: true, paymentUrl, token });
+      return;
+    }
+
     // Retornar al frontend URL de redirección segura a pasarela Webpay integrada en nuestro servidor
     const paymentUrl = `/webpay-portal?token=${token}`;
     res.json({ success: true, paymentUrl, token });
   } catch (err) {
+    console.error("Error al iniciar checkout:", err);
     res.status(500).json({ success: false, error: "Ocurrió un error al iniciar sesión de checkout." });
   }
 });
@@ -469,6 +676,92 @@ app.get("/webpay-portal", (req, res) => {
   `);
 });
 
+// MERCADO PAGO CALLBACK - RECEIVE PAYMENT STATUS AND TRANSACT WITH DATASTORE
+app.get("/api/mercadopago-callback", async (req, res) => {
+  const { token, status, collection_status, status: mpStatus } = req.query;
+  const session = activeSessions[token as string];
+
+  if (!session) {
+    return res.status(400).send(`
+      <html>
+        <head>
+          <title>Mercado Pago - Error</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="bg-zinc-950 text-zinc-150 font-sans flex items-center justify-center min-h-screen">
+          <div class="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-3xl p-8 text-center space-y-4">
+            <h1 class="text-xl font-bold text-red-500">Sesión de pago no válida</h1>
+            <p class="text-xs text-zinc-400">La sesión de pago ha caducado o no se encuentra en el servidor comercial. Vuelve a intentar tu compra.</p>
+            <a href="/" class="inline-block mt-4 text-xs font-bold text-white bg-amber-600 px-6 py-3 rounded-full hover:bg-amber-500 transition-colors">Volver a la Tienda</a>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  // Remove the active session from queue
+  delete activeSessions[token as string];
+
+  const isApproved = status === "success" || collection_status === "approved" || mpStatus === "approved";
+
+  if (!isApproved) {
+    return res.redirect(`/?payment_status=error&error_msg=El+pago+mediante+Mercado+Pago+no+fue+aprobado+o+fue+cancelado.`);
+  }
+
+  try {
+    // Real-time server side logic: perform final lock and commit
+    const products = await getProductsDb(getProducts);
+    const outOfStockItems: string[] = [];
+
+    session.items.forEach((item) => {
+      const pIdx = products.findIndex((p) => p.id === item.product.id);
+      if (pIdx === -1 || products[pIdx].stock < item.quantity) {
+        outOfStockItems.push(item.product.name);
+      }
+    });
+
+    if (outOfStockItems.length > 0) {
+      return res.redirect(`/?payment_status=error&error_msg=No+hay+stock+disponible+de+último+minuto+para:+${outOfStockItems.join(", ")}`);
+    }
+
+    // Deduct products stock securely on DB
+    const updatedProducts = products.map((p) => {
+      const cartItem = session.items.find((item) => item.product.id === p.id);
+      if (cartItem) {
+        return { ...p, stock: p.stock - cartItem.quantity };
+      }
+      return p;
+    });
+    await saveProductsDb(updatedProducts, saveProducts);
+
+    // Write actual Order to backend database
+    const orders = await getOrdersDb(getOrders);
+    const newOrder: Order = {
+      id: `CK-ORD-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear()}`,
+      date: new Date().toISOString(),
+      items: session.items,
+      shippingDetails: session.shippingDetails,
+      subtotal: session.subtotal,
+      shippingCost: session.shippingCost,
+      total: session.total,
+      status: "Pendiente",
+      paymentId: `MP-${req.query.payment_id || Math.floor(10000000 + Math.random() * 90000000)}`
+    };
+
+    orders.unshift(newOrder); // Add to beginning of database
+    await saveOrdersDb(orders, saveOrders);
+
+    // Register customer parameters dynamically on backend datastore
+    await registerClientOnOrder(session.shippingDetails);
+
+    // Success redirect with token references
+    res.redirect(`/?payment_status=success&order_id=${newOrder.id}`);
+  } catch (err) {
+    console.error("Error processing successful MP callback:", err);
+    res.redirect(`/?payment_status=error&error_msg=Ocurrió+un+error+al+crear+su+orden+en+el+servidor.`);
+  }
+});
+
 // WEBPAY CALLBACK - RECEIVE PAYMENT STATUS AND TRANSACT WITH DATASTORE
 app.post("/webpay-callback", async (req, res) => {
   const { token, status } = req.body;
@@ -528,6 +821,9 @@ app.post("/webpay-callback", async (req, res) => {
 
     orders.unshift(newOrder); // Add to beginning of database
     await saveOrdersDb(orders, saveOrders);
+
+    // Register customer parameters dynamically on backend datastore
+    await registerClientOnOrder(session.shippingDetails);
 
     // Success redirect with token references
     res.redirect(`/?payment_status=success&order_id=${newOrder.id}`);

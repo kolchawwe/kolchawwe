@@ -47,3 +47,12 @@ export interface Order {
   status: 'Pendiente' | 'Despachado' | 'Entregado';
   paymentId: string;
 }
+
+export interface Client {
+  email: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  commune: string;
+}
+

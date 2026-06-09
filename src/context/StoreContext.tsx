@@ -21,7 +21,7 @@ interface StoreContextType {
   updateProduct: (id: string, product: Product) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<boolean>;
   updateShippingConfig: (config: ShippingConfig) => Promise<boolean>;
-  processCheckout: (shippingDetails: ShippingDetails) => Promise<{ success: boolean; error?: string; paymentUrl?: string }>;
+  processCheckout: (shippingDetails: ShippingDetails, useSandbox?: boolean) => Promise<{ success: boolean; error?: string; paymentUrl?: string }>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<boolean>;
   refreshProducts: () => void;
   refreshOrders: () => void;
@@ -238,7 +238,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // Checkout Session Generation
-  const processCheckout = async (shippingDetails: ShippingDetails): Promise<{ success: boolean; error?: string; paymentUrl?: string }> => {
+  const processCheckout = async (shippingDetails: ShippingDetails, useSandbox: boolean = false): Promise<{ success: boolean; error?: string; paymentUrl?: string }> => {
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -248,6 +248,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         body: JSON.stringify({
           shippingDetails,
           items: cart,
+          useSandbox,
         }),
       });
 
