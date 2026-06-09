@@ -23,13 +23,138 @@ import {
   CheckCircle2,
   PackageCheck,
   Zap,
-  BarChart3
+  BarChart3,
+  Mail,
+  Settings,
+  AlertTriangle,
+  Eye,
+  X,
+  Server,
+  Send,
+  Loader2
 } from 'lucide-react';
 
 export const SalesReport: React.FC = () => {
   const { orders, updateOrderStatus, products } = useStore();
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pendiente' | 'Despachado' | 'Entregado'>('All');
   const [copiedPayloadId, setCopiedPayloadId] = useState<string | null>(null);
+
+  // New Mailing Module state bindings
+  const [activeTab, setActiveTab] = useState<'analytics' | 'emails'>('analytics');
+  const [corporateEmail, setCorporateEmail] = useState<string>('');
+  const [hasSmtp, setHasSmtp] = useState<boolean>(false);
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [emailLoading, setEmailLoading] = useState<boolean>(true);
+  const [editingEmail, setEditingEmail] = useState<string>('');
+  const [emailSaving, setEmailSaving] = useState<boolean>(false);
+  const [emailSaveSuccess, setEmailSaveSuccess] = useState<boolean>(false);
+
+  // Test email state
+  const [testEmailDest, setTestEmailDest] = useState<string>('');
+  const [testEmailLoading, setTestEmailLoading] = useState<boolean>(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; msg: string; status: 'Sent' | 'Simulated' | 'Failed' } | null>(null);
+
+  // Selected email html layout preview
+  const [previewEmail, setPreviewEmail] = useState<any | null>(null);
+
+  const fetchEmailData = () => {
+    setEmailLoading(true);
+    fetch('/api/email-config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setCorporateEmail(data.corporateEmail);
+          setEditingEmail(data.corporateEmail);
+          setHasSmtp(data.hasSmtp);
+          setEmailLogs(data.logs);
+        }
+        setEmailLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching email configuration:", err);
+        setEmailLoading(false);
+      });
+  };
+
+  React.useEffect(() => {
+    fetchEmailData();
+  }, []);
+
+  const handleSaveCorporateEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmail || !editingEmail.includes('@')) {
+      alert('Por favor introduce una dirección de correo válida.');
+      return;
+    }
+    setEmailSaving(true);
+    setEmailSaveSuccess(false);
+    fetch('/api/email-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ corporateEmail: editingEmail })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setEmailSaving(false);
+        if (data.success) {
+          setCorporateEmail(editingEmail);
+          setEmailSaveSuccess(true);
+          setTimeout(() => setEmailSaveSuccess(false), 3000);
+          fetchEmailData();
+        } else {
+          alert('Error al guardar el correo de destino: ' + data.error);
+        }
+      })
+      .catch(err => {
+        setEmailSaving(false);
+        console.error("Error committing email settings:", err);
+      });
+  };
+
+  const handleSendTestEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmailDest || !testEmailDest.includes('@')) {
+      alert('Por favor introduce un destinatario válido.');
+      return;
+    }
+    setTestEmailLoading(true);
+    setTestEmailResult(null);
+    fetch('/api/email-config/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetEmail: testEmailDest })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setTestEmailLoading(false);
+        if (data.success) {
+          const status = data.log.status;
+          const statusMsg = status === 'Sent'
+            ? 'Mensaje real enviado exitosamente mediante SMTP.'
+            : 'Simulación exitosa. Se ha registrado la notificación comercial en tu bitácora.';
+          setTestEmailResult({
+            success: true,
+            msg: statusMsg,
+            status
+          });
+          fetchEmailData(); // Refresh history log trace
+        } else {
+          setTestEmailResult({
+            success: false,
+            msg: data.error || 'Ocurrió un error inesperado al despachar la prueba.',
+            status: 'Failed'
+          });
+        }
+      })
+      .catch(err => {
+        setTestEmailLoading(false);
+        setTestEmailResult({
+          success: false,
+          msg: 'Error de red al despachar la notificación: ' + err.message,
+          status: 'Failed'
+        });
+      });
+  };
 
   // 1. Core Analytics Metrics
   const totalRevenue = orders.reduce((acc, order) => acc + order.total, 0);
@@ -190,7 +315,45 @@ export const SalesReport: React.FC = () => {
   return (
     <div className="space-y-8" id="sales-reports-module">
       
-      {/* 1. KEY KPI DASHBOARD CARDS */}
+      {/* Tab Switcher Headers */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+        <div>
+          <h2 className="text-xl font-bold text-zinc-100 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-amber-500" />
+            Panel de Administración Comercial
+          </h2>
+          <p className="text-xs text-zinc-400 mt-0.5">Gestión de despachos, estadísticas de venta y notificaciones automáticas.</p>
+        </div>
+        
+        <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 select-none">
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'analytics'
+                ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Ventas y Despachos
+          </button>
+          <button
+            onClick={() => setActiveTab('emails')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              activeTab === 'emails'
+                ? 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            Notificaciones de Correo
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'analytics' ? (
+        <>
+          {/* 1. KEY KPI DASHBOARD CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" id="sales-metrics-grid">
         {/* Total revenue */}
         <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex items-center justify-between">
@@ -512,6 +675,273 @@ export const SalesReport: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+        </>
+      ) : (
+        <div className="space-y-6" id="corporate-mailing-view">
+          
+          {/* SMTP, Corporate configuration grids */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Setting corporate email block */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-lg border border-amber-500/15">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-100">Correo para Notificación de Ventas</h3>
+                  <p className="text-xs text-zinc-500">Define el buzón comercial corporativo que recibirá las alertas de compra.</p>
+                </div>
+              </div>
+              
+              <form onSubmit={handleSaveCorporateEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-mono text-zinc-400 block">Email del Destinatario (Gerencia/Operaciones)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="email"
+                      value={editingEmail}
+                      onChange={(e) => setEditingEmail(e.target.value)}
+                      className="flex-1 px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm focus:outline-none focus:border-amber-500 text-zinc-100"
+                      placeholder="gerencia@cerveceriakolchawwe.cl"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={emailSaving}
+                      className="cursor-pointer py-2 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5"
+                    >
+                      {emailSaving ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        'Guardar'
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                {emailSaveSuccess && (
+                  <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-4 h-4" /> ¡Dirección comercial guardada exitosamente!
+                  </p>
+                )}
+                
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  *Nota: Este correo persistirá en el disco del servidor de forma duradera y se usará para despachar de inmediato cada comprobante de compra autorizado.
+                </p>
+              </form>
+            </div>
+            
+            {/* SMTP Network indicators */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/15">
+                    <Server className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-zinc-100">Estado del Servidor SMTP</h3>
+                    <p className="text-xs text-zinc-500">Monitorea los canales de entrega física del correo electrónico.</p>
+                  </div>
+                </div>
+
+                {hasSmtp ? (
+                  <div className="p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-zinc-300 space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold font-mono">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      SERVICIO SMTP ACTIVO (MODO REAL)
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-normal">
+                      Hemos detectado credenciales de SMTP integradas en tus Variables de Entorno. Los correos se entregarán físicamente a la bandeja de entrada real del destinatario.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 rounded-xl text-zinc-300 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-500 text-xs font-bold font-mono">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                      SIMULADOR DE CORREO ACTIVO
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-normal font-light">
+                      Las alertas se simularán de forma segura. Podrás revisar el cuerpo de cada correo en la lista de abajo de manera interactiva. Para envíos reales, configura <code className="bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 text-amber-500 font-mono text-[9px]">SMTP_HOST</code>, <code className="bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 text-amber-500 font-mono text-[9px]">SMTP_USER</code> y <code className="bg-zinc-950 px-1 py-0.5 rounded border border-zinc-800 text-amber-500 font-mono text-[9px]">SMTP_PASSWORD</code> en las variables de AI Studio.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick verification test box */}
+              <form onSubmit={handleSendTestEmail} className="mt-4 pt-4 border-t border-zinc-800 flex flex-col sm:flex-row items-center gap-2">
+                <input
+                  type="email"
+                  value={testEmailDest}
+                  onChange={(e) => setTestEmailDest(e.target.value)}
+                  className="w-full sm:flex-1 px-4 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs focus:outline-none focus:border-amber-500 text-zinc-100"
+                  placeholder="Probar con un correo (ej: yo@gmail.com)"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={testEmailLoading}
+                  className="w-full sm:w-auto cursor-pointer py-2 px-4 bg-zinc-800 hover:bg-zinc-700 hover:text-white border border-zinc-700 text-zinc-300 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5"
+                >
+                  {testEmailLoading ? (
+                    <>
+                      <Loader2 className="w-3 animate-spin" />
+                      Probando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3 h-3" />
+                      Enviar Test
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {testEmailResult && (
+            <div className={`p-4 rounded-xl border flex items-start gap-3 text-xs ${
+              testEmailResult.success
+                ? testEmailResult.status === 'Sent'
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                  : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                : 'bg-rose-500/10 border-rose-500/25 text-rose-400'
+            }`}>
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 animate-pulse" />
+              <div>
+                <strong className="font-bold font-sans block">{testEmailResult.success ? '✓ Despacho de Correo Exitoso' : '✕ Error de Envío de Correo'}</strong>
+                <p className="mt-0.5 leading-relaxed">{testEmailResult.msg}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Email Logs Section */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden" id="email-logs-archive-panel">
+            <div className="px-6 py-5 border-b border-zinc-800 bg-zinc-950/20 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-zinc-100">Bitácora de Notificaciones & Envío de Correos</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Historial de alertas comerciales mandadas a gerencia por transacciones autorizadas.</p>
+              </div>
+              <button
+                onClick={fetchEmailData}
+                className="p-2 cursor-pointer bg-zinc-950 hover:bg-zinc-800 hover:text-white border border-zinc-800 text-xs font-bold text-zinc-400 rounded-lg transition"
+              >
+                Actualizar
+              </button>
+            </div>
+
+            <div className="divide-y divide-zinc-800">
+              {emailLoading ? (
+                <div className="p-12 text-center text-zinc-500 text-xs flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                  <span>Sincronizando bitácora de correos...</span>
+                </div>
+              ) : emailLogs.length === 0 ? (
+                <div className="p-12 text-center text-zinc-500 text-xs text-zinc-400 leading-relaxed max-w-sm mx-auto">
+                  No se registran despachos de correos en el historial. Tracciona una compra para ver su email simulado o real.
+                </div>
+              ) : (
+                emailLogs.map((log) => (
+                  <div key={log.id} className="p-5 hover:bg-zinc-950/10 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold bg-zinc-950 border border-zinc-800 rounded text-zinc-300">
+                          {log.id}
+                        </span>
+                        
+                        {log.status === 'Sent' && (
+                          <span className="px-2 py-0.5 text-[9px] font-black bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full font-mono">
+                            ✓ REAL (SMTP)
+                          </span>
+                        )}
+
+                        {log.status === 'Simulated' && (
+                          <span className="px-2 py-0.5 text-[9px] font-black bg-amber-500/10 border border-amber-500/25 text-amber-400 rounded-full font-mono">
+                            ⚙ SIMULADO
+                          </span>
+                        )}
+
+                        {log.status === 'Failed' && (
+                          <span className="px-2 py-0.5 text-[9px] font-black bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-full font-mono">
+                            ✕ FALLIDO
+                          </span>
+                        )}
+
+                        <span className="text-[10px] text-zinc-400 font-mono">
+                          {new Date(log.date).toLocaleString('es-CL')}
+                        </span>
+                      </div>
+
+                      <h4 className="text-sm font-bold text-zinc-200 truncate pr-4">{log.subject}</h4>
+                      
+                      <div className="text-[11px] text-zinc-500">
+                        Destinatario: <strong className="text-zinc-400 font-medium">{log.toEmail}</strong> 
+                        {log.orderId && <> | Asociado al pedido: <strong className="text-zinc-400 font-mono font-bold">{log.orderId}</strong></>}
+                      </div>
+
+                      {log.errorMessage && (
+                        <div className="text-[10px] text-rose-400 bg-rose-500/5 p-2 rounded border border-rose-500/10 font-mono mt-1">
+                          Error: {log.errorMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 self-start sm:self-center shrink-0">
+                      <button
+                        onClick={() => setPreviewEmail(log)}
+                        className="px-3.5 py-1.5 cursor-pointer bg-zinc-800 hover:bg-zinc-700 hover:text-white border border-zinc-700 text-zinc-300 text-xs font-bold rounded-lg transition flex items-center gap-1.5 inline-flex"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Ver Correo
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Email iframe Modal */}
+      {previewEmail && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-amber-500 font-bold">
+                  Previsualizador de Notificación Comercial
+                </span>
+                <h4 className="text-sm font-bold text-zinc-100 truncate pr-6">
+                  {previewEmail.subject}
+                </h4>
+              </div>
+              <button
+                onClick={() => setPreviewEmail(null)}
+                className="p-1.5 cursor-pointer hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto flex-1 bg-zinc-950">
+              <iframe
+                srcDoc={previewEmail.body}
+                className="w-full h-[500px] bg-zinc-950 rounded-xl border border-zinc-800"
+                title="Visualizador Notificación Comercial"
+              />
+            </div>
+            
+            <div className="px-6 py-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+              <span>Clave Log: {previewEmail.id}</span>
+              <span>Enviado a: {previewEmail.toEmail}</span>
+            </div>
           </div>
         </div>
       )}

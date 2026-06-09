@@ -28,7 +28,10 @@ import {
   MapPin,
   Compass,
   Users,
-  LogOut
+  LogOut,
+  Instagram,
+  Facebook,
+  MessageSquare
 } from 'lucide-react';
 
 function Storefront() {
@@ -66,23 +69,54 @@ function Storefront() {
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/5 blur-3xl rounded-full animate-pulse" />
         <div className="absolute -bottom-10 left-10 w-80 h-80 bg-gold-400/5 blur-3xl rounded-full" />
 
-        <div className="relative max-w-xl space-y-5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
-            <SparkleIcon className="w-3.5 h-3.5" /> Orgullo de San Fernando • Valle de Colchagua
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-serif text-zinc-100 leading-tight">
-            Fuerza y Tradición en <span className="text-gold-400 italic">Cerveza Artesanal</span>
-          </h1>
-          <p className="text-sm md:text-base text-zinc-400 leading-relaxed max-w-lg font-sans font-light">
-            Cervecería KOLCHAWWE fusiona pasión y lúpulos premium seleccionados desde San Fernando, Chile. Descubre botellas de edición limitada con despacho a domicilio local veloz. ¡Despacho gratis sobre $25.000!
-          </p>
-          <div className="flex flex-wrap gap-4 pt-2 justify-center md:justify-start text-xs font-semibold">
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <ShieldCheck className="w-4 h-4 text-gold-400" /> Webpay Pro Sándbox
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10" id="hero-grid-container">
+          <div className="md:col-span-8 space-y-5 text-left" id="hero-text-col">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
+              <SparkleIcon className="w-3.5 h-3.5" /> Orgullo de San Fernando • Valle de Colchagua
+            </span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold font-serif text-zinc-100 leading-tight">
+              Fuerza y Tradición en <span className="text-gold-400 italic">Cerveza Artesanal</span>
+            </h1>
+            <div className="space-y-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-2xl font-sans font-light" id="hero-storytelling">
+              <p className="font-medium text-gold-400 text-[15px] md:text-[17px]">
+                Todo tiene un origen. El nuestro, está escrito en la tierra.
+              </p>
+              <p>
+                En el corazón del valle de Colchagua, donde el viento baja de la cordillera y acaricia los campos de San Fernando, nace algo más que granos y agua. Nace una conexión con nuestras raíces.
+              </p>
+              <p className="text-zinc-300">
+                Cuando nombramos nuestra cerveza <span className="font-semibold text-zinc-100">Kolchawwe</span>, no solo estamos rindiendo honor a la voz mapudungun que bautizó nuestra provincia. Estamos rescatando la esencia del <span className="italic text-gold-400">"lugar donde hay renacuajos"</span> o <span className="italic text-gold-400">"lugar de las pequeñas lagunas"</span>: un territorio fértil, bendecido por el sol y trabajado por manos que respetan la tradición.
+              </p>
             </div>
-            <div className="w-1.5 h-1.5 rounded-full bg-zinc-800 my-auto" />
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <Compass className="w-4 h-4 text-gold-500" /> Selección de Selección
+            <div className="flex flex-wrap gap-4 pt-2 justify-start text-xs font-semibold">
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <ShieldCheck className="w-4 h-4 text-gold-400" /> Webpay Pro Sándbox
+              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-zinc-800 my-auto" />
+              <div className="flex items-center gap-1.5 text-zinc-400">
+                <Compass className="w-4 h-4 text-gold-500" /> Selección de Selección
+              </div>
+            </div>
+          </div>
+
+          {/* Logo brand illustration badge */}
+          <div className="md:col-span-4 flex justify-center w-full" id="hero-logo-col">
+            <div className="relative group">
+              {/* Outer Golden Glow and frame */}
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-gold-500 to-amber-600 opacity-20 blur-lg group-hover:opacity-35 transition duration-1000 group-hover:duration-200" />
+              <div className="relative bg-zinc-950 border border-gold-500/20 p-2.5 rounded-2xl shadow-2xl w-[260px] md:w-[240px] max-w-full">
+                <img
+                  src="/src/assets/images/kolchawwe_logo_1781035658215.png"
+                  alt="Sello Kolchawwe"
+                  referrerPolicy="no-referrer"
+                  className="rounded-xl w-full h-auto object-cover object-center shadow-inner filter brightness-110 contrast-105"
+                />
+                <div className="mt-2 text-center">
+                  <span className="text-[10px] uppercase font-mono tracking-[0.2em] text-gold-400/80 font-bold block">
+                    Sello de Origen Certificado
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -142,68 +176,101 @@ function Storefront() {
         )}
       </main>
 
-      {/* Storytelling Section */}
-      <section className="bg-gradient-to-b from-zinc-900/40 to-zinc-950 border border-zinc-900 rounded-3xl p-6 md:p-10 space-y-8 mt-12" id="storytelling-section">
+      {/* Storytelling & Visual Gallery Section */}
+      <section className="bg-gradient-to-b from-zinc-900/30 to-zinc-950 border border-zinc-900 rounded-3xl p-6 md:p-10 space-y-8 mt-12" id="storytelling-section">
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <span className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400">Nuestra Identidad</span>
-          <h2 className="text-2xl md:text-3xl font-bold font-serif text-zinc-100">La Esencia de Kolchawwe</h2>
+          <span className="text-xs font-bold tracking-[0.3em] uppercase text-gold-400 block">Galería Kolchawwe</span>
+          <h2 className="text-2xl md:text-3xl font-bold font-serif text-zinc-100">La Esencia de Nuestra Tradición</h2>
           <p className="text-zinc-400 text-sm font-sans font-light leading-relaxed">
             Nacidos y criados en la noble tierra de San Fernando, Chile, elaboramos cervezas con el alma, rindiendo tributo a la fuerza, elegancia y pureza de nuestro emblema familiar.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Tarjeta 1: El Escudo */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 space-y-3.5 hover:border-gold-500/10 transition-colors">
-            <div className="w-11 h-11 rounded-xl bg-gold-400/10 text-gold-400 flex items-center justify-center border border-gold-400/20">
-              <svg className="w-5.5 h-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-.153-8.228-.418m16.914 0a9.003 9.003 0 01-11.963 0m0 0a9.003 9.003 0 0011.963 0" />
-              </svg>
+        {/* Bento Grid Gallery of the 4 Real Brand Images */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="brand-visual-gallery">
+          
+          {/* Item 1: Logo */}
+          <div className="group relative overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/80 hover:border-gold-500/25 transition-all duration-300 flex flex-col" id="gallery-item-logo">
+            <div className="aspect-square w-full overflow-hidden">
+              <img
+                src="/src/assets/images/kolchawwe_logo_1781035658215.png"
+                alt="Emblema Oficial Kolchawwe"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-105"
+              />
             </div>
-            <h3 className="text-base font-bold font-serif text-zinc-150">El Escudo del Caballo</h3>
-            <p className="text-xs text-zinc-450 leading-relaxed font-sans font-light">
-              El imponente caballo blanco rampante de nuestro sello evoca el espíritu indómito de la provincia de Colchagua. Es libertad pura, nobleza y rigor, cualidades volcadas en cada molienda.
-            </p>
+            <div className="p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent flex-1 flex flex-col justify-end">
+              <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-semibold block">Identidad</span>
+              <h4 className="text-xs font-bold text-zinc-250 font-serif mt-0.5">Sello de Kolchawwe</h4>
+              <p className="text-[11px] text-zinc-500 font-sans mt-1 leading-relaxed">Inspirado por el caballo rampante de Colchagua, símbolo de libertad y nobleza.</p>
+            </div>
           </div>
 
-          {/* Tarjeta 2: Cuidado en Botella */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 space-y-3.5 hover:border-gold-500/10 transition-colors">
-            <div className="w-11 h-11 rounded-xl bg-gold-400/10 text-gold-400 flex items-center justify-center border border-gold-400/20">
-              <svg className="w-5.5 h-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V9.31a2 2 0 01.586-1.414l2.828-2.828A2 2 0 019.828 4.5H14.17a2 2 0 011.414.586l2.828 2.828A2 2 0 0119 9.31V19a2 2 0 01-2 2z" />
-              </svg>
+          {/* Item 2: Mug */}
+          <div className="group relative overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/80 hover:border-gold-500/25 transition-all duration-300 flex flex-col" id="gallery-item-mug">
+            <div className="aspect-square w-full overflow-hidden">
+              <img
+                src="/src/assets/images/kolchawwe_mug_1781035668859.png"
+                alt="Copa Servida Kolchawwe"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
             </div>
-            <h3 className="text-base font-bold font-serif text-zinc-150">Artesanía en Botella</h3>
-            <p className="text-xs text-zinc-450 leading-relaxed font-sans font-light">
-              Desde el lavado, llenado a contrapresión, tapado hermético y el delicado etiquetado a mano que puedes apreciar en nuestro taller; aseguramos que cada botella llegue a ti como si estuviera recién servida de guarda.
-            </p>
+            <div className="p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent flex-1 flex flex-col justify-end">
+              <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-semibold block">Frescura</span>
+              <h4 className="text-xs font-bold text-zinc-250 font-serif mt-0.5">Copa de Selección</h4>
+              <p className="text-[11px] text-zinc-500 font-sans mt-1 leading-relaxed">Cremosa corona de espuma en una jarra helada rebosante de carácter artesanal.</p>
+            </div>
           </div>
 
-          {/* Tarjeta 3: San Fernando, Chile */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 space-y-3.5 hover:border-gold-500/10 transition-colors">
-            <div className="w-11 h-11 rounded-xl bg-gold-400/10 text-gold-400 flex items-center justify-center border border-gold-400/20">
-              <svg className="w-5.5 h-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25s-7.5-4.108-7.5-11.25a7.5 7.5 0 1115 0z" />
-              </svg>
+          {/* Item 3: Bottle British */}
+          <div className="group relative overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/80 hover:border-gold-500/25 transition-all duration-300 flex flex-col" id="gallery-item-golden-ale">
+            <div className="aspect-square w-full overflow-hidden">
+              <img
+                src="/src/assets/images/kolchawwe_golden_ale_1781035680844.png"
+                alt="Botella British Golden Ale"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 filter brightness-105"
+              />
             </div>
-            <h3 className="text-base font-bold font-serif text-zinc-150">Identidad de Tierra</h3>
-            <p className="text-xs text-zinc-450 leading-relaxed font-sans font-light">
-              San Fernando nos brinda el agua más cristalina de deshielo de la Cordillera de los Andes y productores apícolas que nos facilitan la fina miel orgánica con la que equilibramos nuestras mezclas complejas.
-            </p>
+            <div className="p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent flex-1 flex flex-col justify-end">
+              <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-semibold block">Envasado</span>
+              <h4 className="text-xs font-bold text-zinc-250 font-serif mt-0.5">British Golden Ale</h4>
+              <p className="text-[11px] text-zinc-500 font-sans mt-1 leading-relaxed">Nuestra joya dorada premium con finos lúpulos cosechados con rigor.</p>
+            </div>
           </div>
+
+          {/* Item 4: Bottle Stout River */}
+          <div className="group relative overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950/80 hover:border-gold-500/25 transition-all duration-300 flex flex-col" id="gallery-item-stout-river">
+            <div className="aspect-square w-full overflow-hidden">
+              <img
+                src="/src/assets/images/kolchawwe_stout_1781035692102.png"
+                alt="Oatmeal Stout en Río de la Cordillera"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
+            <div className="p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent flex-1 flex flex-col justify-end">
+              <span className="text-[10px] font-mono tracking-widest text-gold-400 uppercase font-semibold block">Origen</span>
+              <h4 className="text-xs font-bold text-zinc-250 font-serif mt-0.5">Oatmeal Stout de los Andes</h4>
+              <p className="text-[11px] text-zinc-500 font-sans mt-1 leading-relaxed">Cerveza robusta negra refrescada junto a las aguas cordilleranas del San Fernando.</p>
+            </div>
+          </div>
+
         </div>
 
-        {/* Visual Mock Showcase (inspired by the images of bottle labels) */}
-        <div className="relative overflow-hidden rounded-2xl bg-zinc-900/25 p-6 md:p-8 border border-zinc-90 w-full">
+        {/* Embotellando text summary panel */}
+        <div className="relative overflow-hidden rounded-2xl bg-zinc-900/25 p-6 md:p-8 border border-zinc-90 w-full" id="brand-manifest-container">
           <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
             <div className="shrink-0 flex justify-center">
-              {/* Creative vector of a Rearing Horse Emblem in golden colors */}
-              <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full border border-gold-500/35 bg-zinc-950 flex items-center justify-center p-2 shadow-xl shadow-gold-500/5">
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full border border-gold-500/35 bg-zinc-950 flex items-center justify-center p-2 shadow-xl shadow-gold-500/5">
                 <div className="absolute inset-0.5 rounded-full border border-dashed border-gold-500/10" />
-                <svg className="w-12 h-12 text-gold-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3a9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9A9 9 0 0 0 12 3zm0 2c1.332 0 2.585.344 3.676.953A4 4 0 0 1 12 11h-.5a1.5 1.5 0 0 0-1.5 1.5v.5H9A3 3 0 0 1 6 10h.5A2.5 2.5 0 0 0 9 7.5V7a2 2 0 0 1 2-2h1z" />
-                </svg>
+                <img
+                  src="/src/assets/images/kolchawwe_logo_1781035658215.png"
+                  alt="Avatar Sello"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-full"
+                />
               </div>
             </div>
             <div className="space-y-2 text-center md:text-left flex-1">
@@ -355,15 +422,69 @@ function MainLayout() {
       />
 
       {/* Footer Area */}
-      <footer className="bg-zinc-955 border-t border-zinc-900 text-zinc-500 py-12 mt-20" id="main-footer">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="text-center md:text-left space-y-1.5">
-            <span className="block font-bold text-zinc-400 font-serif">Cervecería Kolchawwe SPA</span>
-            <span className="block text-xs">Manejo inteligente de stock y pasarela de pago certificada. San Fernando, Chile.</span>
+      <footer className="bg-zinc-950 border-t border-zinc-900 text-zinc-500 py-12 mt-20" id="main-footer">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center space-y-8">
+          
+          {/* Social Icons row */}
+          <div className="flex items-center justify-center gap-6" id="footer-social-links">
+            {/* WhatsApp */}
+            <a
+              href="https://wa.me/56950891729"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3.5 rounded-full border border-gold-500/25 hover:border-gold-400 bg-zinc-900/60 text-gold-400 hover:text-gold-300 transition-all duration-300 hover:scale-110 shadow-lg shadow-gold-500/5 hover:shadow-gold-500/10"
+              title="WhatsApp: +56 9 5089 1729"
+            >
+              <MessageSquare className="w-5 h-5 animate-pulse" />
+            </a>
+
+            {/* Instagram */}
+            <a
+              href="https://www.instagram.com/kolchawwe"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3.5 rounded-full border border-gold-500/25 hover:border-gold-400 bg-zinc-900/60 text-gold-400 hover:text-gold-300 transition-all duration-300 hover:scale-110 shadow-lg shadow-gold-500/5 hover:shadow-gold-500/10"
+              title="Instagram: @kolchawwe"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
+
+            {/* Facebook */}
+            <a
+              href="https://www.facebook.com/people/Kolchawwe/61584739270268"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-3.5 rounded-full border border-gold-500/25 hover:border-gold-400 bg-zinc-900/60 text-gold-400 hover:text-gold-300 transition-all duration-300 hover:scale-110 shadow-lg shadow-gold-500/5 hover:shadow-gold-500/10"
+              title="Facebook"
+            >
+              <Facebook className="w-5 h-5" />
+            </a>
+
+            {/* Email */}
+            <a
+              href="mailto:kolchawwe@gmail.com"
+              className="p-3.5 rounded-full border border-gold-500/25 hover:border-gold-400 bg-zinc-900/60 text-gold-400 hover:text-gold-300 transition-all duration-300 hover:scale-110 shadow-lg shadow-gold-500/5 hover:shadow-gold-500/10"
+              title="Correo: kolchawwe@gmail.com"
+            >
+              <Mail className="w-5 h-5" />
+            </a>
           </div>
-          <div className="flex gap-4 text-xs font-mono">
-            <span className="text-gold-500/75 font-semibold">• Modo Sándbox Activo</span>
-            <span>• No para consumo comercial</span>
+
+          {/* Chilean Alcohol Warnings block - styled perfectly like the image */}
+          <div className="w-full p-6 sm:p-8 bg-zinc-950 border border-zinc-800/80 rounded-sm text-center" id="alcohol-warning-box">
+            <p className="text-[10px] sm:text-xs font-mono font-medium tracking-widest text-zinc-450 leading-relaxed uppercase">
+              BEBER EN EXCESO ES DAÑINO PARA LA SALUD. VENTA PROHIBIDA A MENORES DE 18 AÑOS. DISFRUTA LA NOBLEZA DE KOLCHAWWE CON RESPONSABILIDAD.
+            </p>
+          </div>
+
+          {/* Subtitle brand footer */}
+          <div className="text-center space-y-2 pt-4 border-t border-zinc-900 w-full text-[11px] text-zinc-600">
+            <span className="block font-bold text-zinc-400 font-serif">Cervecería Kolchawwe SPA</span>
+            <span className="block">San Fernando, Valle de Colchagua, Chile • Despacho Seguro de Selección Limitada</span>
+            <div className="flex items-center justify-center gap-4 text-[10px] font-mono mt-1">
+              <span className="text-gold-500/60 font-semibold">• Sandbox Webpay</span>
+              <span>• Conforme a la Ley N° 19.925 y Ley N° 21.363</span>
+            </div>
           </div>
         </div>
       </footer>

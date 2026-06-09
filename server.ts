@@ -14,6 +14,15 @@ import {
   getClientsDb,
   saveClientsDb
 } from "./server-db.ts";
+import {
+  getCorporateEmail,
+  saveCorporateEmail,
+  getEmailLogs,
+  sendSalesEmailNotification,
+  sendTestEmailNotification,
+  isSmtpConfigured
+} from "./server-email.ts";
+
 
 // Keep INITIAL_PRODUCTS here to avoid importing TS files directly to compiled CJS without bundler issues
 const SEED_PRODUCTS = [
@@ -369,6 +378,49 @@ app.post("/api/clients", async (req, res) => {
     }
   } else {
     res.status(400).json({ success: false, error: "Formato de cuerpo inválido. Debe ser un arreglo." });
+  }
+});
+
+// 4.5. Configuración y Notificación de Correos Corporativos (Mailing)
+app.get("/api/email-config", (req, res) => {
+  try {
+    const corporateEmail = getCorporateEmail();
+    const logs = getEmailLogs();
+    const hasSmtp = isSmtpConfigured();
+    res.json({
+      success: true,
+      hasSmtp,
+      corporateEmail,
+      logs
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+app.post("/api/email-config", (req, res) => {
+  try {
+    const { corporateEmail } = req.body;
+    if (!corporateEmail || typeof corporateEmail !== "string" || !corporateEmail.includes("@")) {
+      return res.status(400).json({ success: false, error: "Dirección de correo no válida." });
+    }
+    saveCorporateEmail(corporateEmail);
+    res.json({ success: true, message: "Correo corporativo actualizado exitosamente." });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+app.post("/api/email-config/test", async (req, res) => {
+  try {
+    const { targetEmail } = req.body;
+    if (!targetEmail || typeof targetEmail !== "string" || !targetEmail.includes("@")) {
+      return res.status(400).json({ success: false, error: "Destinatario no válido." });
+    }
+    const log = await sendTestEmailNotification(targetEmail);
+    res.json({ success: true, log });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || String(err) });
   }
 });
 
@@ -754,6 +806,13 @@ app.get("/api/mercadopago-callback", async (req, res) => {
     // Register customer parameters dynamically on backend datastore
     await registerClientOnOrder(session.shippingDetails);
 
+    // Send real-time commercial email alerts to corporate account
+    try {
+      await sendSalesEmailNotification(newOrder);
+    } catch (mailErr) {
+      console.error("Non-blocking error dispatching sales commercial email:", mailErr);
+    }
+
     // Success redirect with token references
     res.redirect(`/?payment_status=success&order_id=${newOrder.id}`);
   } catch (err) {
@@ -824,6 +883,13 @@ app.post("/webpay-callback", async (req, res) => {
 
     // Register customer parameters dynamically on backend datastore
     await registerClientOnOrder(session.shippingDetails);
+
+    // Send real-time commercial email alerts to corporate account
+    try {
+      await sendSalesEmailNotification(newOrder);
+    } catch (mailErr) {
+      console.error("Non-blocking error dispatching sales commercial email:", mailErr);
+    }
 
     // Success redirect with token references
     res.redirect(`/?payment_status=success&order_id=${newOrder.id}`);

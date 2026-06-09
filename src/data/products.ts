@@ -14,7 +14,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Lager',
     price: 3100,
     stock: 120,
-    image: 'https://images.unsplash.com/photo-1566633806327-68e152aaf26d?auto=format&fit=crop&q=80&w=600',
+    image: '/src/assets/images/kolchawwe_golden_ale_1781035680844.png',
     abv: 5.2,
     ibu: 20,
     volume: '330cc'
@@ -27,7 +27,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'Stout',
     price: 3400,
     stock: 85,
-    image: 'https://images.unsplash.com/photo-1584225065152-4a1454aa3d4e?auto=format&fit=crop&q=80&w=600',
+    image: '/src/assets/images/kolchawwe_stout_1781035692102.png',
     abv: 6.8,
     ibu: 30,
     volume: '330cc'
@@ -40,7 +40,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     category: 'IPA',
     price: 3300,
     stock: 95,
-    image: 'https://images.unsplash.com/photo-1532634922-8fe0b757fb13?auto=format&fit=crop&q=80&w=600',
+    image: '/src/assets/images/kolchawwe_mug_1781035668859.png',
     abv: 6.4,
     ibu: 48,
     volume: '330cc'

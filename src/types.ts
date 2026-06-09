@@ -56,3 +56,16 @@ export interface Client {
   commune: string;
 }
 
+export interface EmailLog {
+  id: string;
+  date: string;
+  toEmail: string;
+  sender: string;
+  subject: string;
+  body: string;
+  orderId?: string;
+  status: 'Sent' | 'Simulated' | 'Failed';
+  errorMessage?: string;
+}
+
+

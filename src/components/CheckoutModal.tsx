@@ -48,6 +48,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     notes: '',
   });
 
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+
   // Credit Card states - Step 2: Payment
   const [cardDetails, setCardDetails] = useState({
     number: '',
@@ -95,6 +97,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
       url.searchParams.delete('order_id');
       window.history.replaceState({}, '', url.toString());
     }
+    setAgeConfirmed(false);
     onClose();
   };
 
@@ -150,6 +153,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     if (!shippingDetails.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return false;
     if (!shippingDetails.address.trim()) return false;
     if (!shippingDetails.phone.trim()) return false;
+    if (!ageConfirmed) return false;
     return true;
   };
 
@@ -412,6 +416,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                 />
               </div>
 
+              {/* Age Verification Checkbox (Ley N° 21.363) */}
+              <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl flex items-start gap-3" id="age-verification-checkbox-group">
+                <input
+                  type="checkbox"
+                  id="ageConfirmed"
+                  checked={ageConfirmed}
+                  onChange={(e) => setAgeConfirmed(e.target.checked)}
+                  required
+                  className="mt-1 h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-gold-500 focus:ring-gold-500/50 focus:ring-2 focus:ring-offset-0 cursor-pointer accent-gold-500"
+                />
+                <label htmlFor="ageConfirmed" className="text-xs text-zinc-350 leading-relaxed cursor-pointer select-none">
+                  <span className="font-bold text-gold-400 block mb-0.5">Declaración de Mayoría de Edad (Ley N° 21.363)</span>
+                  Declaro bajo juramento que soy mayor de 18 años. Entiendo que la Ley N° 21.363 de Chile prohíbe la venta de bebidas alcohólicas a menores de edad y que se requerirá mostrar una cédula de identidad vigente al recibir el despacho. *
+                </label>
+              </div>
+
               {/* Banner de Ayuda para Mercado Pago en Producción */}
               {mpConfig?.hasMp && !useSandbox && (
                 <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-zinc-300 space-y-2.5">
@@ -470,23 +490,37 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={!validateShipping() || paymentProcessing}
-                  className="w-full sm:w-auto px-6 py-3 cursor-pointer rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 disabled:bg-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed font-bold text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-gold-500/10 transition"
-                >
-                  {paymentProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
-                      Iniciando Pago Seguro...
-                    </>
-                  ) : (
-                    <>
-                      Continuar al Pago Seguro
-                      <ArrowRight className="w-4 h-4 text-zinc-950" />
-                    </>
-                  )}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto" id="checkout-actions-container">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    disabled={paymentProcessing}
+                    className="w-full sm:w-auto px-5 py-3 cursor-pointer rounded-xl border border-zinc-800 hover:bg-zinc-900 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 font-bold text-sm flex items-center justify-center gap-1.5 transition"
+                    id="btn-checkout-back"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Volver Atrás
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={!validateShipping() || paymentProcessing}
+                    className="w-full sm:w-auto px-6 py-3 cursor-pointer rounded-xl bg-gradient-to-r from-gold-400 to-gold-600 hover:from-gold-300 hover:to-gold-500 text-zinc-950 disabled:bg-zinc-900 disabled:text-zinc-500 disabled:cursor-not-allowed font-bold text-sm flex items-center justify-center gap-1.5 shadow-lg shadow-gold-500/10 transition"
+                    id="btn-checkout-submit"
+                  >
+                    {paymentProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                        Iniciando Pago Seguro...
+                      </>
+                    ) : (
+                      <>
+                        Continuar al Pago Seguro
+                        <ArrowRight className="w-4 h-4 text-zinc-950" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           )}
