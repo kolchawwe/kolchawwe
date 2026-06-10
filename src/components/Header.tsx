@@ -27,10 +27,10 @@ export const Header: React.FC<HeaderProps> = ({ currentView, setView, toggleCart
         <div className="flex items-center gap-3.5 cursor-pointer" onClick={() => setView('shop')} id="logo-branding">
           <div className="w-11 h-11 bg-zinc-900 rounded-full shadow-lg shadow-gold-500/10 border border-gold-500/30 overflow-hidden flex items-center justify-center shrink-0" id="header-logo-badge">
             <img
-              src="/src/assets/images/kolchawwe_logo_1781035658215.png"
+              src="/images/colchague-logo.png?v=11"
               alt="Kolchawwe"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover filter brightness-105"
+              className="w-full h-full object-cover"
             />
           </div>
           <div>
