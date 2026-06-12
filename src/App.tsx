@@ -97,15 +97,7 @@ function Storefront() {
               Cuando nombramos nuestra cerveza <span className="font-semibold text-zinc-100">Kolchawwe</span>, no solo estamos rindiendo honor a la voz mapudungun que bautizó nuestra provincia. Estamos rescatando la esencia del <span className="italic text-gold-400">"lugar donde hay renacuajos"</span> o <span className="italic text-gold-400">"lugar de las pequeñas lagunas"</span>: un territorio fértil, bendecido por el sol y trabajado por manos que respetan la tradición.
             </p>
           </div>
-          <div className="flex flex-wrap gap-4 pt-4 justify-center text-xs font-semibold">
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <ShieldCheck className="w-4 h-4 text-gold-400" /> Webpay Pro Sándbox
-            </div>
-            <div className="w-1.5 h-1.5 rounded-full bg-zinc-800 my-auto" />
-            <div className="flex items-center gap-1.5 text-zinc-400">
-              <Compass className="w-4 h-4 text-gold-500" /> Selección de Selección
-            </div>
-          </div>
+          {/* Removed Webpay Pro Sándbox and Selección de Selección per request */}
         </div>
       </section>
 
@@ -209,7 +201,7 @@ function Storefront() {
             <div className="space-y-3 text-center md:text-left flex-1">
               <h4 className="text-base md:text-lg font-bold font-serif text-zinc-100">Embotellando Nobleza Santafecina</h4>
               <p className="text-xs md:text-sm text-zinc-400 leading-relaxed font-sans font-light">
-                "KOLCHAWWE representa la indómita pasión provinciana. Al igual que el imponente caballo de Colchagua, no descansamos hasta verter la perfection en cada copa. Descorchar una Kolchawwe es rendirse ante el sabor genuino, sin atajos, directo desde la joya del valle central".
+                "KOLCHAWWE representa la indómita pasión provinciana. Al igual que el imponente caballo de Colchagua, no descansamos hasta verter la perfección en cada copa. Descorchar una Kolchawwe es rendirse ante el sabor genuino, sin atajos, directo desde la joya del valle central".
               </p>
               <div className="flex items-center gap-2 justify-center md:justify-start pt-1">
                 <span className="text-[10px] font-semibold font-mono tracking-wider uppercase text-[#C29F5C]">
@@ -491,7 +483,6 @@ function MainLayout() {
             <span className="block font-bold text-zinc-400 font-serif">Cervecería Kolchawwe SPA</span>
             <span className="block">San Fernando, Valle de Colchagua, Chile • Despacho Seguro de Selección Limitada</span>
             <div className="flex items-center justify-center gap-4 text-[10px] font-mono mt-1">
-              <span className="text-gold-500/60 font-semibold">• Sandbox Webpay</span>
               <span>• Conforme a la Ley N° 19.925 y Ley N° 21.363</span>
             </div>
           </div>

@@ -26,6 +26,7 @@ export interface CartItem {
 export interface ShippingConfig {
   basePrice: number;
   freeShippingThreshold: number;
+  communes?: { name: string; price: number }[];
 }
 
 export interface ShippingDetails {

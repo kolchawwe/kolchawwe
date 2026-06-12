@@ -52,8 +52,14 @@ export async function initializePostgres(seedProducts: any[]) {
         image TEXT,
         abv NUMERIC,
         ibu INTEGER,
-        volume VARCHAR(50)
+        volume VARCHAR(50),
+        hidden BOOLEAN DEFAULT FALSE
       );
+    `);
+
+    // Ensure hidden column exists in existing tables
+    await client.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS hidden BOOLEAN DEFAULT FALSE;
     `);
 
     // 2. Create Orders Table
@@ -77,8 +83,14 @@ export async function initializePostgres(seedProducts: any[]) {
       CREATE TABLE IF NOT EXISTS shipping_config (
         id VARCHAR(50) PRIMARY KEY,
         base_price INTEGER NOT NULL,
-        free_shipping_threshold INTEGER NOT NULL
+        free_shipping_threshold INTEGER NOT NULL,
+        communes JSONB DEFAULT '[]'::jsonb
       );
+    `);
+
+    // Ensure communes column is added for any existing setups
+    await client.query(`
+      ALTER TABLE shipping_config ADD COLUMN IF NOT EXISTS communes JSONB DEFAULT '[]'::jsonb;
     `);
 
     // 4. Create Clients Table
@@ -173,7 +185,7 @@ export async function getProductsDb(getProductsFileFallback: () => Product[]): P
   if (!pool) return getProductsFileFallback();
   try {
     const { rows } = await pool.query(
-      "SELECT id, name, tagline, description, category, price, stock, image, CAST(abv AS float) as abv, ibu, volume FROM products"
+      "SELECT id, name, tagline, description, category, price, stock, image, CAST(abv AS float) as abv, ibu, volume, hidden FROM products"
     );
     return rows as Product[];
   } catch (err) {
@@ -209,8 +221,8 @@ export async function saveProductsDb(productsList: Product[], saveProductsFileFa
       // Upsert current list
       for (const p of productsList) {
         await client.query(
-          `INSERT INTO products (id, name, tagline, description, category, price, stock, image, abv, ibu, volume)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `INSERT INTO products (id, name, tagline, description, category, price, stock, image, abv, ibu, volume, hidden)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            ON CONFLICT (id) DO UPDATE SET
              name = EXCLUDED.name,
              tagline = EXCLUDED.tagline,
@@ -221,8 +233,9 @@ export async function saveProductsDb(productsList: Product[], saveProductsFileFa
              image = EXCLUDED.image,
              abv = EXCLUDED.abv,
              ibu = EXCLUDED.ibu,
-             volume = EXCLUDED.volume`,
-          [p.id, p.name, p.tagline, p.description, p.category, p.price, p.stock, p.image, p.abv, p.ibu, p.volume]
+             volume = EXCLUDED.volume,
+             hidden = EXCLUDED.hidden`,
+          [p.id, p.name, p.tagline, p.description, p.category, p.price, p.stock, p.image, p.abv, p.ibu, p.volume, !!p.hidden]
         );
       }
 
@@ -337,12 +350,13 @@ export async function getShippingConfigDb(getShippingConfigFileFallback: () => S
   if (!pool) return getShippingConfigFileFallback();
   try {
     const { rows } = await pool.query(
-      "SELECT base_price, free_shipping_threshold FROM shipping_config WHERE id = 'global_config'"
+      "SELECT base_price, free_shipping_threshold, communes FROM shipping_config WHERE id = 'global_config'"
     );
     if (rows.length > 0) {
       return {
         basePrice: rows[0].base_price,
-        freeShippingThreshold: rows[0].free_shipping_threshold
+        freeShippingThreshold: rows[0].free_shipping_threshold,
+        communes: typeof rows[0].communes === "string" ? JSON.parse(rows[0].communes) : rows[0].communes || []
       };
     }
     return getShippingConfigFileFallback();
@@ -362,12 +376,13 @@ export async function saveShippingConfigDb(config: ShippingConfig, saveShippingC
   }
   try {
     await pool.query(
-      `INSERT INTO shipping_config (id, base_price, free_shipping_threshold)
-       VALUES ('global_config', $1, $2)
+      `INSERT INTO shipping_config (id, base_price, free_shipping_threshold, communes)
+       VALUES ('global_config', $1, $2, $3)
        ON CONFLICT (id) DO UPDATE SET
          base_price = EXCLUDED.base_price,
-         free_shipping_threshold = EXCLUDED.free_shipping_threshold`,
-      [config.basePrice, config.freeShippingThreshold]
+         free_shipping_threshold = EXCLUDED.free_shipping_threshold,
+         communes = EXCLUDED.communes`,
+      [config.basePrice, config.freeShippingThreshold, JSON.stringify(config.communes || [])]
     );
     return true;
   } catch (err) {

@@ -142,7 +142,22 @@ function saveOrders(orders: Order[]) {
 }
 
 function getShippingConfig(): ShippingConfig {
-  const defaultConfig: ShippingConfig = { basePrice: 3500, freeShippingThreshold: 25000 };
+  const defaultConfig: ShippingConfig = { 
+    basePrice: 3500, 
+    freeShippingThreshold: 25000,
+    communes: [
+      { name: 'San Fernando', price: 2000 },
+      { name: 'Chimbarongo', price: 2500 },
+      { name: 'Nancagua', price: 2500 },
+      { name: 'Placilla', price: 2500 },
+      { name: 'Santa Cruz', price: 3000 },
+      { name: 'Rancagua', price: 3500 },
+      { name: 'Curicó', price: 3500 },
+      { name: 'Santiago', price: 4000 },
+      { name: 'Las Condes', price: 4000 },
+      { name: 'Viña del Mar', price: 4500 }
+    ]
+  };
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const content = fs.readFileSync(CONFIG_FILE, "utf-8");
@@ -469,7 +484,18 @@ app.post("/api/checkout", async (req, res) => {
     // Calcular totales en el servidor
     const shoppingConfig = await getShippingConfigDb(getShippingConfig);
     const subtotal = items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const shippingCost = subtotal >= shoppingConfig.freeShippingThreshold ? 0 : shoppingConfig.basePrice;
+
+    let baseShippingPrice = shoppingConfig.basePrice;
+    if (shippingDetails.commune && Array.isArray(shoppingConfig.communes)) {
+      const matchedCommune = shoppingConfig.communes.find(
+        (c: any) => c.name.toLowerCase().trim() === shippingDetails.commune.toLowerCase().trim()
+      );
+      if (matchedCommune) {
+        baseShippingPrice = matchedCommune.price;
+      }
+    }
+
+    const shippingCost = subtotal >= shoppingConfig.freeShippingThreshold ? 0 : baseShippingPrice;
     const total = subtotal + shippingCost;
 
     // Generar token único de Webpay / Mercado Pago

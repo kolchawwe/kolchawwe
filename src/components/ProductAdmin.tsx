@@ -57,8 +57,60 @@ export const ProductAdmin: React.FC = () => {
   const [shipLimitInput, setShipLimitInput] = useState(shippingConfig.freeShippingThreshold);
   const [isSavingShip, setIsSavingShip] = useState(false);
 
+  // Commune custom shipping states
+  const [communesLocal, setCommunesLocal] = useState<{ name: string; price: number }[]>(
+    shippingConfig.communes || []
+  );
+  const [newCommuneName, setNewCommuneName] = useState('');
+  const [newCommunePrice, setNewCommunePrice] = useState(3000);
+
+  // Sync commune with loaded shippingConfig from DB
+  React.useEffect(() => {
+    if (shippingConfig.communes) {
+      setCommunesLocal(shippingConfig.communes);
+    }
+  }, [shippingConfig]);
+
   // Quick Inline Stock Update state
   const [quickStockEdit, setQuickStockEdit] = useState<{ id: string; stock: number } | null>(null);
+
+  // Local hidden state for checkboxes until saved
+  const [localHidden, setLocalHidden] = useState<Record<string, boolean>>({});
+  const [isSavingHidden, setIsSavingHidden] = useState(false);
+
+  // Sync with product changes from DB
+  React.useEffect(() => {
+    const initialHidden: Record<string, boolean> = {};
+    products.forEach((p) => {
+      initialHidden[p.id] = !!p.hidden;
+    });
+    setLocalHidden(initialHidden);
+  }, [products]);
+
+  const saveHiddenChanges = async () => {
+    setIsSavingHidden(true);
+    let anyError = false;
+    for (const p of products) {
+      const isCurrentlyHidden = localHidden[p.id] !== undefined ? localHidden[p.id] : !!p.hidden;
+      if (isCurrentlyHidden !== !!p.hidden) {
+        const success = await updateProduct(p.id, {
+          ...p,
+          hidden: isCurrentlyHidden,
+        });
+        if (!success) anyError = true;
+      }
+    }
+    setIsSavingHidden(false);
+    if (!anyError) {
+      // Show success feedback
+    }
+  };
+
+  // Check if there are any pending hidden changes
+  const hasHiddenChanges = products.some((p) => {
+    const currentLocal = localHidden[p.id] !== undefined ? localHidden[p.id] : !!p.hidden;
+    return currentLocal !== !!p.hidden;
+  });
 
   const resetForm = () => {
     setFormData({
@@ -150,6 +202,7 @@ export const ProductAdmin: React.FC = () => {
     updateShippingConfig({
       basePrice: shipCostInput ?? 3500,
       freeShippingThreshold: shipLimitInput ?? 25000,
+      communes: communesLocal,
     });
     setIsSavingShip(true);
     setTimeout(() => setIsSavingShip(false), 1200);
@@ -213,6 +266,89 @@ export const ProductAdmin: React.FC = () => {
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-300 focus:outline-none focus:border-amber-500 text-sm font-mono"
               />
             </div>
+          </div>
+
+          {/* List and add communes */}
+          <div className="mt-6 border-t border-zinc-800/80 pt-5 space-y-4">
+            <h4 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5 text-amber-500" /> Gestión por Comunas y Tarifas
+            </h4>
+            
+            {/* Form to add a new commune */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <div>
+                <label className="block text-[11px] text-zinc-400 mb-1">Nombre Comuna</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Curicó"
+                  value={newCommuneName}
+                  onChange={(e) => setNewCommuneName(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-300 focus:outline-none focus:border-amber-500 text-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-zinc-400 mb-1">Costo Despacho (CLP)</label>
+                <input
+                  type="number"
+                  placeholder="Ej: 3000"
+                  value={newCommunePrice}
+                  onChange={(e) => setNewCommunePrice(parseInt(e.target.value) || 0)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-300 focus:outline-none focus:border-amber-500 text-xs font-mono"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newCommuneName.trim()) return;
+                  // Check duplicate
+                  if (communesLocal.some(c => c.name.toLowerCase() === newCommuneName.trim().toLowerCase())) {
+                    alert('Esta comuna ya está agregada');
+                    return;
+                  }
+                  setCommunesLocal([...communesLocal, { name: newCommuneName.trim(), price: newCommunePrice }]);
+                  setNewCommuneName('');
+                }}
+                className="w-full py-2 bg-amber-500/10 hover:bg-amber-500 hover:text-zinc-950 text-amber-400 font-bold rounded-xl text-xs transition border border-amber-500/10 cursor-pointer"
+              >
+                + Añadir Comuna
+              </button>
+            </div>
+
+            {/* List of current communes */}
+            {communesLocal.length === 0 ? (
+              <p className="text-xs text-zinc-500 italic">No hay comunas específicas configuradas. Se aplicará costo base.</p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto border border-zinc-850 bg-zinc-950/40 rounded-xl p-3 divide-y divide-zinc-800/50 space-y-2.5">
+                {communesLocal.map((c, idx) => (
+                  <div key={idx} className="flex items-center justify-between pt-2.5 first:pt-0">
+                    <span className="text-xs font-medium text-zinc-350">{c.name}</span>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        value={c.price}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          const updated = [...communesLocal];
+                          updated[idx].price = val;
+                          setCommunesLocal(updated);
+                        }}
+                        className="w-24 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-zinc-300 text-xs text-right font-mono focus:border-amber-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCommunesLocal(communesLocal.filter((_, i) => i !== idx));
+                        }}
+                        className="p-1 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 rounded transition cursor-pointer"
+                        title="Eliminar Comuna"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 flex justify-end">
@@ -435,6 +571,30 @@ export const ProductAdmin: React.FC = () => {
           </span>
         </div>
 
+        {hasHiddenChanges && (
+          <div className="bg-amber-500/10 border-b border-zinc-800 px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+              <p className="text-xs text-amber-350 font-medium">
+                Tienes cambios de visibilidad pendientes. Haz clic en "Guardar Ocultamientos" para aplicarlos en la tienda.
+              </p>
+            </div>
+            <button
+              onClick={saveHiddenChanges}
+              disabled={isSavingHidden}
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold text-[11px] uppercase tracking-wider rounded-lg transition-all shadow-md shadow-amber-500/10 shrink-0 flex items-center gap-1.5 cursor-pointer"
+            >
+              {isSavingHidden ? (
+                <>
+                  <Check className="w-3.5 h-3.5 animate-spin" /> Guardando...
+                </>
+              ) : (
+                'Guardar Ocultamientos'
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Listing block */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm text-zinc-400">
@@ -547,12 +707,12 @@ export const ProductAdmin: React.FC = () => {
                           <input
                             type="checkbox"
                             id={`hide-chk-${prod.id}`}
-                            checked={!!prod.hidden}
+                            checked={localHidden[prod.id] !== undefined ? localHidden[prod.id] : !!prod.hidden}
                             onChange={() => {
-                              updateProduct(prod.id, {
-                                ...prod,
-                                hidden: !prod.hidden,
-                              });
+                              setLocalHidden((prev) => ({
+                                ...prev,
+                                [prod.id]: !(localHidden[prod.id] !== undefined ? localHidden[prod.id] : !!prod.hidden),
+                              }));
                             }}
                             className="sr-only peer"
                           />

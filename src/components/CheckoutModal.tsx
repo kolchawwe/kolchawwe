@@ -104,7 +104,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const shippingCost = subtotal >= shippingConfig.freeShippingThreshold ? 0 : shippingConfig.basePrice;
+  
+  const getShippingCost = () => {
+    if (subtotal >= shippingConfig.freeShippingThreshold) return 0;
+    const communes = shippingConfig.communes || [];
+    const matched = communes.find(
+      c => c.name.toLowerCase().trim() === shippingDetails.commune.toLowerCase().trim()
+    );
+    return matched ? matched.price : shippingConfig.basePrice;
+  };
+
+  const shippingCost = getShippingCost();
   const total = subtotal + shippingCost;
 
   // Form changes
@@ -236,18 +246,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     setTimeout(() => setJsonCopied(false), 2000);
   };
 
-  const communeOptions = [
-    'San Fernando',
-    'Santiago',
-    'Las Condes',
-    'Viña del Mar',
-    'Curicó',
-    'Rancagua',
-    'Chimbarongo',
-    'Nancagua',
-    'Santa Cruz',
-    'Placilla'
+  const communesList = shippingConfig.communes || [
+    { name: 'San Fernando', price: 2000 },
+    { name: 'Santiago', price: 4000 },
+    { name: 'Las Condes', price: 4000 },
+    { name: 'Viña del Mar', price: 4550 },
+    { name: 'Curicó', price: 3500 },
+    { name: 'Rancagua', price: 3500 },
+    { name: 'Chimbarongo', price: 2500 },
+    { name: 'Nancagua', price: 2500 },
+    { name: 'Santa Cruz', price: 3000 },
+    { name: 'Placilla', price: 2500 }
   ];
+
+  const communeOptions = communesList.map(c => c.name);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 overflow-y-auto" id="checkout-modal-root">
@@ -373,11 +385,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                     onChange={handleShippingChange}
                     className="w-full bg-zinc-955 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:outline-none focus:border-gold-500 transition-colors text-sm"
                   >
-                    {communeOptions.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt} {opt === 'San Fernando' ? '(Envío Local Veloz)' : ''}
-                      </option>
-                    ))}
+                    {communesList.map((c) => {
+                      const isFree = subtotal >= shippingConfig.freeShippingThreshold;
+                      const displayPrice = isFree ? "Gratis" : formatCLP(c.price);
+                      return (
+                        <option key={c.name} value={c.name}>
+                          {c.name} {c.name === 'San Fernando' ? '(Local)' : ''} — {displayPrice}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
