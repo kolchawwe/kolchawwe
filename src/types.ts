@@ -15,6 +15,7 @@ export interface Product {
   abv: number; // Alcohol By Volume
   ibu: number; // International Bitterness Units
   volume: string; // e.g. "330cc", "500cc"
+  hidden?: boolean;
 }
 
 export interface CartItem {

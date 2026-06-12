@@ -39,8 +39,9 @@ function Storefront() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<'All' | 'IPA' | 'Stout' | 'Lager' | 'Amber' | 'Belgian'>('All');
 
-  // Filter products by search and category
+  // Filter products by search and category, and hide disabled ones
   const filteredProducts = products.filter((prod) => {
+    if (prod.hidden) return false;
     const matchesSearch = prod.name.toLowerCase().includes(search.toLowerCase()) || 
                           prod.tagline.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = category === 'All' || prod.category === category;

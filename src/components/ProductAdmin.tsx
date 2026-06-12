@@ -445,6 +445,7 @@ export const ProductAdmin: React.FC = () => {
                 <th className="py-4 px-6 text-right">Precio unitario</th>
                 <th className="py-4 px-6 text-center">Grados & IBU</th>
                 <th className="py-4 px-6 text-center">Stock Bodega</th>
+                <th className="py-4 px-6 text-center">Ocultar variedad</th>
                 <th className="py-4 px-6 text-right">Controles</th>
               </tr>
             </thead>
@@ -537,6 +538,29 @@ export const ProductAdmin: React.FC = () => {
                           </button>
                         </div>
                       )}
+                    </td>
+
+                    {/* Hide variety checkbox toggle */}
+                    <td className="py-3 px-6 text-center">
+                      <div className="flex items-center justify-center">
+                        <label className="relative flex items-center justify-center cursor-pointer group" htmlFor={`hide-chk-${prod.id}`}>
+                          <input
+                            type="checkbox"
+                            id={`hide-chk-${prod.id}`}
+                            checked={!!prod.hidden}
+                            onChange={() => {
+                              updateProduct(prod.id, {
+                                ...prod,
+                                hidden: !prod.hidden,
+                              });
+                            }}
+                            className="sr-only peer"
+                          />
+                          <div className="w-5 h-5 bg-zinc-950 border border-zinc-700 hover:border-amber-500 rounded flex items-center justify-center transition-all peer-checked:bg-amber-500 peer-checked:border-amber-500 text-zinc-950">
+                            <Check className="w-3.5 h-3.5 opacity-0 peer-checked:opacity-100 transition-opacity stroke-[3px]" />
+                          </div>
+                        </label>
+                      </div>
                     </td>
 
                     {/* Operational controls */}
