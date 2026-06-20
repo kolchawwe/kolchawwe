@@ -318,11 +318,25 @@ export const ProductAdmin: React.FC = () => {
             {communesLocal.length === 0 ? (
               <p className="text-xs text-zinc-500 italic">No hay comunas específicas configuradas. Se aplicará costo base.</p>
             ) : (
-              <div className="max-h-48 overflow-y-auto border border-zinc-850 bg-zinc-950/40 rounded-xl p-3 divide-y divide-zinc-800/50 space-y-2.5">
+              <div className="max-h-56 overflow-y-auto border border-zinc-85/80 bg-zinc-950/40 rounded-xl p-3 divide-y divide-zinc-800/50 space-y-2.5">
                 {communesLocal.map((c, idx) => (
-                  <div key={idx} className="flex items-center justify-between pt-2.5 first:pt-0">
-                    <span className="text-xs font-medium text-zinc-350">{c.name}</span>
-                    <div className="flex items-center gap-3">
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2.5 first:pt-0">
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={c.name}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const updated = [...communesLocal];
+                          updated[idx].name = val;
+                          setCommunesLocal(updated);
+                        }}
+                        placeholder="Nombre de comuna"
+                        className="w-full bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700/80 focus:border-amber-500 focus:bg-zinc-900 rounded-lg text-xs text-zinc-200 px-2.5 py-1 transition focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                      <span className="text-[10px] text-zinc-500">Costo ($):</span>
                       <input
                         type="number"
                         value={c.price}
@@ -339,7 +353,7 @@ export const ProductAdmin: React.FC = () => {
                         onClick={() => {
                           setCommunesLocal(communesLocal.filter((_, i) => i !== idx));
                         }}
-                        className="p-1 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 rounded transition cursor-pointer"
+                        className="p-1.5 hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 rounded-lg transition cursor-pointer"
                         title="Eliminar Comuna"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

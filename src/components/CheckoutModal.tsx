@@ -389,7 +389,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                       const isFree = subtotal >= shippingConfig.freeShippingThreshold;
                       const displayPrice = isFree ? "Gratis" : formatCLP(c.price);
                       return (
-                        <option key={c.name} value={c.name}>
+                        <option
+                          key={c.name}
+                          value={c.name}
+                          className="bg-white text-zinc-950 font-sans"
+                          style={{ backgroundColor: 'white', color: '#09090b' }}
+                        >
                           {c.name} {c.name === 'San Fernando' ? '(Local)' : ''} — {displayPrice}
                         </option>
                       );
@@ -448,64 +453,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                 </label>
               </div>
 
-              {/* Banner de Ayuda para Mercado Pago en Producción */}
-              {mpConfig?.hasMp && !useSandbox && (
-                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-zinc-300 space-y-2.5">
-                  <div className="flex items-start gap-2.5 text-amber-450">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <span className="text-xs font-bold font-sans">
-                      Instrucciones de Mercado Pago (Modo Real)
-                    </span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-zinc-400">
-                    Estás utilizando tus credenciales reales de producción. Para evitar el error de Mercado Pago <strong className="text-zinc-300">"Una de las partes... es de prueba"</strong>:
-                  </p>
-                  <ul className="list-disc pl-4 text-[10px] space-y-1 text-zinc-400 leading-normal">
-                    <li>
-                      <strong className="text-zinc-300">Cierra tu cuenta corporate:</strong> No intentes realizar el pago si tienes iniciada tu sesión de Mercado Pago vendedora en este navegador. Utiliza una ventana de <strong className="text-amber-400 font-medium">Incógnito</strong> o un dispositivo diferente.
-                    </li>
-                    <li>
-                      <strong className="text-zinc-300">No uses tarjetas de prueba:</strong> En modo real no puedes usar tarjetas de simulación (e.g. que inicien con 4012). Debes pagar con una <strong className="text-zinc-300">tarjeta real diferente</strong> a la del vendedor (puedes transferir o pagar 1 CLP para ensayar).
-                    </li>
-                    <li>
-                      <strong className="text-zinc-300">Para hacer simulaciones ficticias:</strong> Si prefieres probar con tarjetas de simulación, cambia la clave del token a un token de pruebas (empieza con <code className="bg-zinc-900 border border-zinc-800 px-1 py-0.5 rounded text-zinc-350">TEST-</code>) en tus Variables de Entorno.
-                    </li>
-                  </ul>
-                </div>
-              )}
-
               {/* Información sobre la Pasarela de Pago */}
-              <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  {mpConfig?.hasMp ? (
-                    <>
-                      <div className={`w-2 h-2 rounded-full ${useSandbox ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`} />
-                      <div>
-                        <span className="text-xs font-bold text-zinc-200 block">
-                          Mercado Pago ({useSandbox ? 'Modo Prueba' : 'Modo Real'})
-                        </span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">
-                          {useSandbox 
-                            ? 'Simulación segura. No genera cobros reales.' 
-                            : 'Conexión exitosa. Transacción real de producción.'}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse" />
-                      <div>
-                        <span className="text-xs font-bold text-zinc-200 block">
-                          Simulador Webpay Plus
-                        </span>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">
-                          Pruebas locales del flujo de compra y pedidos.
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
+              <div className="pt-4 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-end gap-4">
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto" id="checkout-actions-container">
                   <button
                     type="button"
