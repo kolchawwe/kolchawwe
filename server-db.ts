@@ -15,6 +15,12 @@ let isConnected = false;
 
 if (connectionString) {
   console.log("⚡ [Database] PostgreSQL connection string detected. Initializing pg Pool...");
+  
+  // Set environment variable to bypass TLS certificate rejection (crucial for self-signed chains in Aiven)
+  if (!connectionString.includes("localhost") && !connectionString.includes("127.0.0.1")) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  }
+
   pool = new Pool({
     connectionString,
     // Render's native PostgreSQL and external connections generally require SSL enabled.

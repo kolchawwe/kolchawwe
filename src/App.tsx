@@ -13,6 +13,7 @@ import { ProductAdmin } from './components/ProductAdmin';
 import { SalesReport } from './components/SalesReport';
 import { ClientsAdmin } from './components/ClientsAdmin';
 import { AdminGate } from './components/AdminGate';
+import { DbAdmin } from './components/DbAdmin';
 import {
   Search,
   Sliders,
@@ -31,7 +32,8 @@ import {
   LogOut,
   Instagram,
   Facebook,
-  MessageSquare
+  MessageSquare,
+  Database
 } from 'lucide-react';
 
 function Storefront() {
@@ -274,7 +276,7 @@ function MainLayout() {
   const [view, setView] = useState<'shop' | 'admin'>(() => {
     return window.location.pathname === '/admin' ? 'admin' : 'shop';
   });
-  const [adminTab, setAdminTab] = useState<'inventory' | 'sales' | 'clients'>('inventory');
+  const [adminTab, setAdminTab] = useState<'inventory' | 'sales' | 'clients' | 'database'>('inventory');
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const { successfulOrderToShow } = useStore();
@@ -383,6 +385,17 @@ function MainLayout() {
                       Clientes Compradores
                     </span>
                   </button>
+                  <button
+                    onClick={() => setAdminTab('database')}
+                    className={`px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                      adminTab === 'database' ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-md' : 'text-zinc-450 hover:text-white'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Database className="w-4 h-4" />
+                      Base de Datos
+                    </span>
+                  </button>
                 </div>
 
                 <button
@@ -402,8 +415,10 @@ function MainLayout() {
                 <ProductAdmin />
               ) : adminTab === 'sales' ? (
                 <SalesReport />
-              ) : (
+              ) : adminTab === 'clients' ? (
                 <ClientsAdmin />
+              ) : (
+                <DbAdmin />
               )}
             </div>
           </div>
