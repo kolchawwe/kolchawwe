@@ -21,7 +21,9 @@ import {
   HelpCircle,
   Truck,
   RotateCcw,
-  PlusCircle
+  PlusCircle,
+  FileText,
+  Download
 } from 'lucide-react';
 
 export const ProductAdmin: React.FC = () => {
@@ -210,6 +212,34 @@ export const ProductAdmin: React.FC = () => {
 
   return (
     <div className="space-y-8" id="product-admin-panel">
+      {/* Banner de Descarga de Documentación Técnica */}
+      <div className="bg-zinc-900/60 border border-zinc-800/80 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4" id="technical-docs-banner">
+        <div className="flex items-start gap-3.5">
+          <span className="p-2.5 bg-amber-500/15 text-amber-400 rounded-xl inline-block mt-0.5 shrink-0">
+            <FileText className="w-5 h-5" />
+          </span>
+          <div>
+            <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+              Manual Técnico de Implementación y Deploy
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/10 text-amber-400 font-mono tracking-wider uppercase font-bold">
+                Word (.docx)
+              </span>
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1 max-w-2xl leading-relaxed">
+              Descarga el manual para subir el código a producción, configurar variables de entorno (Mercado Pago, SMTP, Postgres) y asociar tu dominio adquirido en <strong>NIC Chile</strong> mediante DNS Cloudflare en simples pasos.
+            </p>
+          </div>
+        </div>
+        <a
+          href="/api/download-manual"
+          download="Manual_Tecnico_Kolchawwe.docx"
+          className="cursor-pointer shrink-0 py-2.5 px-4.5 bg-zinc-850 hover:bg-zinc-800 hover:text-white border border-zinc-750 text-zinc-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md"
+        >
+          <Download className="w-4 h-4" />
+          Descargar Manual Técnico
+        </a>
+      </div>
+
       {/* Dynamic Actions & Shipping settings row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="admin-top-controls">
         {/* New Item Launcher */}

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -12,7 +13,8 @@ import {
   getShippingConfigDb,
   saveShippingConfigDb,
   getClientsDb,
-  saveClientsDb
+  saveClientsDb,
+  getDbStatus
 } from "./server-db.ts";
 import {
   getCorporateEmail,
@@ -22,6 +24,7 @@ import {
   sendTestEmailNotification,
   isSmtpConfigured
 } from "./server-email.ts";
+import { generateManualDoc } from "./src/utils/manualGenerator.ts";
 
 
 // Keep INITIAL_PRODUCTS here to avoid importing TS files directly to compiled CJS without bundler issues
@@ -235,6 +238,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // --- API INDEPENDIENTES DEL CLIENTE (EXCLUSIVAS DEL BACKEND) ---
 
+// DB Connection Status Diagnosis Endpoint
+app.get("/api/db-status", (req, res) => {
+  res.json(getDbStatus());
+});
+
 // 1. Productos
 app.get("/api/products", async (req, res) => {
   try {
@@ -435,6 +443,18 @@ app.post("/api/email-config/test", async (req, res) => {
     const log = await sendTestEmailNotification(targetEmail);
     res.json({ success: true, log });
   } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message || String(err) });
+  }
+});
+
+app.get("/api/download-manual", async (req, res) => {
+  try {
+    const buffer = await generateManualDoc();
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", "attachment; filename=Manual_Tecnico_Kolchawwe.docx");
+    res.send(buffer);
+  } catch (err: any) {
+    console.error("Error generating manual DOCX", err);
     res.status(500).json({ success: false, error: err.message || String(err) });
   }
 });

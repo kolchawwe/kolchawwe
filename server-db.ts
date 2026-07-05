@@ -7,12 +7,14 @@ import pg from "pg";
 const { Pool } = pg;
 import { Product, Order, ShippingConfig, Client } from "./src/types.ts";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.AIVEN_DATABASE_URL || process.env.DATABASE_URL;
 
 let pool: pg.Pool | null = null;
+let connectionError: string | null = null;
+let isConnected = false;
 
 if (connectionString) {
-  console.log("⚡ [Database] PostgreSQL DATABASE_URL detected. Initializing pg Pool...");
+  console.log("⚡ [Database] PostgreSQL connection string detected. Initializing pg Pool...");
   pool = new Pool({
     connectionString,
     // Render's native PostgreSQL and external connections generally require SSL enabled.
@@ -26,7 +28,33 @@ if (connectionString) {
     console.error("⚠️ [Database] Unexpected error on idle PostgreSQL client:", err);
   });
 } else {
-  console.log("📁 [Database] No DATABASE_URL found. Falling back to local JSON directory persistence.");
+  console.log("📁 [Database] No PostgreSQL connection string found. Falling back to local JSON directory persistence.");
+}
+
+export function getDbStatus() {
+  let maskedConnectionString = "None";
+  let host = "None";
+  let database = "None";
+  
+  if (connectionString) {
+    try {
+      const parsed = new URL(connectionString);
+      host = parsed.hostname;
+      database = parsed.pathname.replace(/^\//, "");
+      maskedConnectionString = `${parsed.protocol}//${parsed.username ? parsed.username : 'user'}:******@${parsed.hostname}:${parsed.port || '5432'}/${database}`;
+    } catch (err: any) {
+      maskedConnectionString = "Invalid URL format";
+    }
+  }
+
+  return {
+    usingPostgres: !!connectionString,
+    isConnected,
+    connectionError,
+    host,
+    database,
+    maskedConnectionString
+  };
 }
 
 /**
@@ -38,6 +66,8 @@ export async function initializePostgres(seedProducts: any[]) {
   try {
     const client = await pool.connect();
     console.log("🔌 [Database] DB Connected. Bootstrapping schemas and initial indexes...");
+    isConnected = true;
+    connectionError = null;
 
     // 1. Create Products Table
     await client.query(`
@@ -173,7 +203,9 @@ export async function initializePostgres(seedProducts: any[]) {
 
     client.release();
     console.log("✅ [Database] PostgreSQL tables synchronized and ready for queries.");
-  } catch (err) {
+  } catch (err: any) {
+    isConnected = false;
+    connectionError = err.message || String(err);
     console.error("❌ [Database] Failed to bootstrap PostgreSQL database:", err);
   }
 }
