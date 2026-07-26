@@ -14,6 +14,7 @@ import { SalesReport } from './components/SalesReport';
 import { ClientsAdmin } from './components/ClientsAdmin';
 import { AdminGate } from './components/AdminGate';
 import { DbAdmin } from './components/DbAdmin';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
   Sliders,
@@ -63,32 +64,84 @@ function Storefront() {
     Belgian: 'Belgian Strong',
   };
 
+  // Stagger entry configurations for Hero content
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15,
+        delayChildren: 0.2
+      }
+    }
+  };
+
+  const staggerItem = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100, damping: 15 } }
+  };
+
   return (
     <div className="space-y-8" id="storefront-view-wrapper">
-            {/* Visual Ambient Hero Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 to-zinc-900 border border-gold-500/10 px-6 py-12 md:p-16 text-center md:text-left shadow-2xl" id="hero-landing">
-        
-        {/* Background visual graphics */}
+      {/* Visual Ambient Hero Banner with entrance animations */}
+      <motion.section 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 border border-gold-500/10 px-6 py-12 md:p-16 text-center md:text-left shadow-2xl" 
+        id="hero-landing"
+      >
+        {/* Background ambient glowing spheres */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold-500/5 blur-3xl rounded-full animate-pulse" />
         <div className="absolute -bottom-10 left-10 w-80 h-80 bg-gold-400/5 blur-3xl rounded-full" />
 
-        <div className="relative z-10 w-full flex flex-col items-center text-center space-y-6" id="hero-full-width-container">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20">
-            <SparkleIcon className="w-3.5 h-3.5" /> Orgullo de San Fernando • Valle de Colchagua
-          </span>
-          {/* Logo de la marca arriba del título */}
-          <div className="block max-w-[200px] sm:max-w-[240px] md:max-w-[280px] w-full mb-2" id="hero-brand-banner-wrapper">
+        <motion.div 
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="relative z-10 w-full flex flex-col items-center text-center space-y-6" 
+          id="hero-full-width-container"
+        >
+          <motion.span 
+            variants={staggerItem}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-400 border border-gold-500/20 shadow-sm"
+          >
+            <SparkleIcon className="w-3.5 h-3.5 animate-spin-slow" /> Orgullo de San Fernando • Valle de Colchagua
+          </motion.span>
+
+          {/* Logo de la marca con animación de respiración y hover flotante */}
+          <motion.div 
+            variants={staggerItem}
+            animate={{ y: [0, -6, 0] }}
+            transition={{
+              repeat: Infinity,
+              duration: 4.5,
+              ease: "easeInOut"
+            }}
+            whileHover={{ scale: 1.04 }}
+            className="block max-w-[200px] sm:max-w-[240px] md:max-w-[280px] w-full mb-2 cursor-pointer" 
+            id="hero-brand-banner-wrapper"
+          >
             <img
               src="/images/colchague-logo.png?v=11"
               alt="Logo Premium Kolchawwe"
               referrerPolicy="no-referrer"
-              className="w-full h-auto object-contain mx-auto rounded-2xl shadow-xl shadow-black/40 border border-gold-500/15 hover:border-gold-500/35 transition-all duration-300"
+              className="w-full h-auto object-contain mx-auto rounded-2xl shadow-2xl shadow-black/60 border border-gold-500/15 hover:border-gold-500/40 transition-all duration-300"
             />
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-serif text-zinc-100 leading-tight">
+          </motion.div>
+
+          <motion.h1 
+            variants={staggerItem}
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-serif text-zinc-100 leading-tight"
+          >
             Fuerza y Tradición en <span className="text-gold-400 italic">Cerveza Artesanal</span>
-          </h1>
-          <div className="space-y-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-4xl mx-auto font-sans font-light" id="hero-storytelling">
+          </motion.h1>
+
+          <motion.div 
+            variants={staggerItem}
+            className="space-y-4 text-sm md:text-base text-zinc-400 leading-relaxed max-w-4xl mx-auto font-sans font-light" 
+            id="hero-storytelling"
+          >
             <p className="font-medium text-gold-400 text-[15px] md:text-[17px]">
               Todo tiene un origen. El nuestro, está escrito en la tierra.
             </p>
@@ -98,12 +151,11 @@ function Storefront() {
             <p className="text-zinc-350">
               Cuando nombramos nuestra cerveza <span className="font-semibold text-zinc-100">Kolchawwe</span>, no solo estamos rindiendo honor a la voz mapudungun que bautizó nuestra provincia. Estamos rescatando la esencia del <span className="italic text-gold-400">"lugar donde hay renacuajos"</span> o <span className="italic text-gold-400">"lugar de las pequeñas lagunas"</span>: un territorio fértil, bendecido por el sol y trabajado por manos que respetan la tradición.
             </p>
-          </div>
-          {/* Removed Webpay Pro Sándbox and Selección de Selección per request */}
-        </div>
-      </section>
+          </motion.div>
+        </motion.div>
+      </motion.section>
 
-      {/* Storytelling & Visual Gallery Section */}
+      {/* Storytelling & Visual Gallery Section with Scroll Reveal */}
       <section className="bg-zinc-950/40 border border-zinc-900/80 rounded-3xl p-6 md:p-10 space-y-12" id="storytelling-section">
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <span className="text-xs font-bold tracking-[0.25em] uppercase text-gold-500 block font-serif">Galería Kolchawwe</span>
@@ -113,84 +165,123 @@ function Storefront() {
           </p>
         </div>
 
-        {/* 4-Column Clean Traditional Gallery Cards */}
+        {/* 4-Column Clean Traditional Gallery Cards with individual reveal */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="brand-visual-gallery">
           
           {/* Card 1: Identidad */}
-          <div className="flex flex-col space-y-3" id="gallery-item-logo">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="flex flex-col space-y-3 group cursor-pointer" 
+            id="gallery-item-logo"
+          >
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
               <img
                 src="/images/colchague-logo.png?v=11"
                 alt="Sello de Kolchawwe"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
               />
             </div>
             <div className="space-y-1 flex-1 flex flex-col pt-1">
               <span className="text-[10px] font-mono tracking-widest text-[#C29F5C] uppercase font-bold block">Identidad</span>
-              <h4 className="text-sm font-bold text-zinc-100 font-serif">Sello de Kolchawwe</h4>
+              <h4 className="text-sm font-bold text-zinc-100 font-serif group-hover:text-gold-400 transition-colors duration-300">Sello de Kolchawwe</h4>
               <p className="text-xs text-zinc-400 font-sans font-light leading-relaxed">Inspirado por el caballo rampante de Colchagua, símbolo de libertad y nobleza.</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 2: Frescura */}
-          <div className="flex flex-col space-y-3" id="gallery-item-mug">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex flex-col space-y-3 group cursor-pointer" 
+            id="gallery-item-mug"
+          >
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
               <img
                 src="/images/kolchawwe_mug_1781035668859.png"
                 alt="Copa de Selección"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
               />
             </div>
             <div className="space-y-1 flex-1 flex flex-col pt-1">
               <span className="text-[10px] font-mono tracking-widest text-[#C29F5C] uppercase font-bold block">Frescura</span>
-              <h4 className="text-sm font-bold text-zinc-100 font-serif">Copa de Selección</h4>
+              <h4 className="text-sm font-bold text-zinc-100 font-serif group-hover:text-gold-400 transition-colors duration-300">Copa de Selección</h4>
               <p className="text-xs text-zinc-400 font-sans font-light leading-relaxed">Cremosa corona de espuma en una jarra helada rebosante de carácter artesanal.</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 3: Envasado */}
-          <div className="flex flex-col space-y-3" id="gallery-item-golden-ale">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-col space-y-3 group cursor-pointer" 
+            id="gallery-item-golden-ale"
+          >
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
               <img
                 src="/images/kolchawwe_golden_ale_1781035680844.png"
                 alt="British Golden Ale"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
               />
             </div>
             <div className="space-y-1 flex-1 flex flex-col pt-1">
               <span className="text-[10px] font-mono tracking-widest text-[#C29F5C] uppercase font-bold block">Envasado</span>
-              <h4 className="text-sm font-bold text-zinc-100 font-serif">British Golden Ale</h4>
+              <h4 className="text-sm font-bold text-zinc-100 font-serif group-hover:text-gold-400 transition-colors duration-300">British Golden Ale</h4>
               <p className="text-xs text-zinc-400 font-sans font-light leading-relaxed">Nuestra joya dorada premium con finos lúpulos cosechados con rigor.</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 4: Origen */}
-          <div className="flex flex-col space-y-3" id="gallery-item-stout-river">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="flex flex-col space-y-3 group cursor-pointer" 
+            id="gallery-item-stout-river"
+          >
             <div className="aspect-square w-full overflow-hidden rounded-2xl border border-zinc-900 bg-zinc-950">
               <img
                 src="/images/kolchawwe_stout_1781035692102.png"
                 alt="Oatmeal Stout de los Andes"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1"
               />
             </div>
             <div className="space-y-1 flex-1 flex flex-col pt-1">
               <span className="text-[10px] font-mono tracking-widest text-[#C29F5C] uppercase font-bold block">Origen</span>
-              <h4 className="text-sm font-bold text-zinc-100 font-serif">Oatmeal Stout de los Andes</h4>
+              <h4 className="text-sm font-bold text-zinc-100 font-serif group-hover:text-gold-400 transition-colors duration-300">Oatmeal Stout de los Andes</h4>
               <p className="text-xs text-zinc-400 font-sans font-light leading-relaxed">Cerveza robusta negra refrescada junto a las aguas cordilleranas del San Fernando.</p>
             </div>
-          </div>
+          </motion.div>
 
         </div>
 
-        {/* Framed Horizontal Brand Manifesto Box */}
-        <div className="relative overflow-hidden rounded-2xl bg-zinc-950/20 p-6 md:p-8 border border-zinc-800/80 w-full" id="brand-manifest-container">
+        {/* Framed Horizontal Brand Manifesto Box with scroll slide-in */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="relative overflow-hidden rounded-2xl bg-zinc-950/25 p-6 md:p-8 border border-zinc-800/80 w-full" 
+          id="brand-manifest-container"
+        >
           <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8">
             <div className="shrink-0 flex justify-center">
-              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-full border border-gold-500/35 bg-zinc-950 flex items-center justify-center p-2 shadow-xl shadow-gold-500/5">
+              <motion.div 
+                whileHover={{ scale: 1.08, rotate: 360 }}
+                transition={{ duration: 1 }}
+                className="relative w-20 h-20 md:w-24 md:h-24 rounded-full border border-gold-500/35 bg-zinc-950 flex items-center justify-center p-2 shadow-xl shadow-gold-500/5 cursor-pointer"
+              >
                 <div className="absolute inset-0.5 rounded-full border border-dashed border-gold-500/10" />
                 <img
                   src="/images/colchague-logo.png?v=11"
@@ -198,7 +289,7 @@ function Storefront() {
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover rounded-full"
                 />
-              </div>
+              </motion.div>
             </div>
             <div className="space-y-3 text-center md:text-left flex-1">
               <h4 className="text-base md:text-lg font-bold font-serif text-zinc-100">Embotellando Nobleza Santafecina</h4>
@@ -212,26 +303,33 @@ function Storefront() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* FILTER AND SEARCH CONTROLS */}
       <section className="bg-zinc-950/70 backdrop-blur-md border border-zinc-800/80 rounded-2xl p-5 md:p-6" id="filters-panel">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           
-          {/* Dynamic Category selectors */}
+          {/* Dynamic Category selectors with relative spring active-pill */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto" id="categorization-bar">
             {categoriesOrder.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
+                className={`relative cursor-pointer px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-300 ${
                   category === cat
-                    ? 'bg-gradient-to-r from-gold-400 to-gold-600 text-zinc-950 font-bold shadow-lg shadow-gold-500/20 scale-[1.02]'
+                    ? 'text-zinc-950 font-bold scale-[1.02] z-10'
                     : 'bg-zinc-900/65 text-zinc-400 hover:text-gold-400 border border-zinc-800/80 hover:border-gold-500/20'
                 }`}
               >
                 {categoryLabels[cat]}
+                {category === cat && (
+                  <motion.span 
+                    layoutId="activeCategoryTab"
+                    className="absolute inset-0 bg-gradient-to-r from-gold-400 to-gold-600 rounded-xl -z-10 shadow-lg shadow-gold-500/10"
+                    transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  />
+                )}
               </button>
             ))}
           </div>
@@ -250,7 +348,7 @@ function Storefront() {
         </div>
       </section>
 
-      {/* PRODUCT GRID SHOWCASE */}
+      {/* PRODUCT GRID SHOWCASE with AnimatePresence layout animations */}
       <main id="products-catalogue">
         {filteredProducts.length === 0 ? (
           <div className="text-center py-16 bg-zinc-900/40 border border-zinc-800 rounded-2xl space-y-3">
@@ -261,11 +359,25 @@ function Storefront() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProducts.map((beer) => (
-              <ProductCard key={beer.id} product={beer} />
-            ))}
-          </div>
+          <motion.div 
+            layout
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredProducts.map((beer) => (
+                <motion.div
+                  key={beer.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <ProductCard product={beer} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         )}
       </main>
     </div>

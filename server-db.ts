@@ -209,11 +209,33 @@ export async function initializePostgres(seedProducts: any[]) {
 
     client.release();
     console.log("✅ [Database] PostgreSQL tables synchronized and ready for queries.");
+
+    // Start background keep-alive ping every 6 hours to prevent Aiven idle auto-pause
+    startDatabaseKeepAlive();
   } catch (err: any) {
     isConnected = false;
     connectionError = err.message || String(err);
     console.error("❌ [Database] Failed to bootstrap PostgreSQL database:", err);
   }
+}
+
+let keepAliveInterval: NodeJS.Timeout | null = null;
+
+function startDatabaseKeepAlive() {
+  if (keepAliveInterval) return;
+  
+  // 6 hours interval (in ms: 6 * 60 * 60 * 1000 = 21,600,000 ms)
+  const SIX_HOURS = 21600000;
+  
+  keepAliveInterval = setInterval(async () => {
+    if (!pool) return;
+    try {
+      await pool.query("SELECT 1;");
+      console.log("💓 [Database Keep-Alive] Heartbeat ping sent successfully to Aiven PostgreSQL.");
+    } catch (err: any) {
+      console.warn("⚠️ [Database Keep-Alive] Heartbeat ping failed:", err.message);
+    }
+  }, SIX_HOURS);
 }
 
 /**
