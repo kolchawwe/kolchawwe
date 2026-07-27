@@ -238,6 +238,16 @@ app.use(express.urlencoded({ extended: true }));
 
 // --- API INDEPENDIENTES DEL CLIENTE (EXCLUSIVAS DEL BACKEND) ---
 
+// Health & Keep-Alive Check Endpoint for Render / External Monitors
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    service: "Cervecería Kolchawwe Backend",
+    uptimeSeconds: Math.floor(process.uptime())
+  });
+});
+
 // DB Connection Status Diagnosis Endpoint
 app.get("/api/db-status", (req, res) => {
   res.json(getDbStatus());
@@ -968,7 +978,41 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Cervercería Kolchawwe Server running at http://0.0.0.0:${PORT}`);
+    startRenderKeepAlive();
   });
+}
+
+function startRenderKeepAlive() {
+  // Render automatically populates process.env.RENDER_EXTERNAL_URL
+  const selfUrl = process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || process.env.SERVER_URL;
+  if (!selfUrl) {
+    console.log("ℹ️ [Render Keep-Alive] No RENDER_EXTERNAL_URL or APP_URL configured. Self-ping inactive.");
+    return;
+  }
+
+  const pingEndpoint = `${selfUrl.replace(/\/$/, "")}/api/health`;
+  console.log(`🚀 [Render Keep-Alive] Self-ping scheduled every 10 minutes to: ${pingEndpoint}`);
+
+  // Ping every 10 minutes (Render sleeps after 15 min of inactivity)
+  const TEN_MINUTES = 10 * 60 * 1000;
+  
+  // First initial ping after 30 seconds
+  setTimeout(() => sendPing(pingEndpoint), 30000);
+
+  setInterval(() => sendPing(pingEndpoint), TEN_MINUTES);
+}
+
+async function sendPing(url: string) {
+  try {
+    const response = await fetch(url);
+    if (response.ok) {
+      console.log(`💓 [Render Keep-Alive] Self-ping successful to ${url} at ${new Date().toLocaleTimeString('es-CL')}`);
+    } else {
+      console.warn(`⚠️ [Render Keep-Alive] Self-ping response HTTP ${response.status}`);
+    }
+  } catch (err: any) {
+    console.warn(`⚠️ [Render Keep-Alive] Self-ping failed:`, err.message);
+  }
 }
 
 startServer();
